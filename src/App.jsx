@@ -49,11 +49,11 @@ import {
 export const FIREBASE_ENABLED = false; // flip to true once firebaseConfig is filled in
 
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
+  apiKey: "AIzaSyD9LFCTjC9KNoNBCKXuglTiMBT8Nt4mxFM",
+  authDomain: "senior-automation-engineer.firebaseapp.com",
+  projectId: "senior-automation-engineer"",
+  storageBucket: "senior-automation-engineer.firebasestorage.app",
+  messagingSenderId: "1:175332574553:web:38905f1fdc2d3025073848"",
   appId: "YOUR_APP_ID",
 };
 
