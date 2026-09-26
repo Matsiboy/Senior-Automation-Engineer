@@ -6,5 +6,6 @@ import react from "@vitejs/plugin-react";
 //   - User/org site (https://USERNAME.github.io/, repo literally named USERNAME.github.io): set base to "/"
 export default defineConfig({
   plugins: [react()],
-  base: "/REPO-NAME/",
+  base: "/Senior-Automation-Engineer
+/",
 });
