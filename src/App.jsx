@@ -61,14 +61,14 @@ export const firebaseConfig = {
 // THEME
 // ---------------------------------------------------------------------------
 export const THEME = {
-  primary: "#3B60C5",
-  primaryDark: "#2A4A9E",
-  primarySoft: "rgba(59, 96, 197, 0.10)",
-  paper: "#FDF2DE",
-  paperDim: "#F5E4C3",
-  ink: "#141B2E",
-  inkSoft: "#4B5468",
-  line: "rgba(20, 27, 46, 0.12)",
+  primary: "#2563EB",
+  primaryDark: "#1D4ED8",
+  primarySoft: "rgba(37, 99, 235, 0.08)",
+  paper: "#FFFFFF",
+  paperDim: "#F8FAFC",
+  ink: "#0F172A",
+  inkSoft: "#64748B",
+  line: "rgba(15, 23, 42, 0.08)",
 };
 
 // ---------------------------------------------------------------------------
@@ -521,6 +521,141 @@ export function resetSiteContent(lang) {
 }
 
 // =====================================================================================
+// Media (stage images) — separate from CONTENT because a photo should be the
+// same regardless of language. One Firestore doc total (collection "siteMedia",
+// doc "default") holds { stages: { identify: {src, scale, x, y}, ... } }.
+// src is either a data: URL (zero-setup fallback) or a Firebase Storage
+// download URL (used automatically once FIREBASE_ENABLED is true). scale is a
+// zoom multiplier (1 = fit, up to 2.5); x/y are CSS object-position percentages
+// used to pan/recenter the crop — this is what "reposition" means here.
+// =====================================================================================
+const MEDIA_COLLECTION = "siteMedia";
+const MEDIA_DOC_ID = "default";
+const MEDIA_STORAGE_KEY = "site-media-override";
+
+function defaultMedia() {
+  const stages = {};
+  STAGE_META.forEach((s) => { stages[s.id] = { src: ASSETS[s.id] || null, scale: 1, x: 50, y: 50 }; });
+  return { stages };
+}
+
+function readLocalMediaOverride() {
+  try {
+    const raw = localStorage.getItem(MEDIA_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function getEditableMedia() {
+  const local = readLocalMediaOverride();
+  return local ? deepMerge(defaultMedia(), local) : defaultMedia();
+}
+
+export function useSiteMedia() {
+  const [media, setMediaState] = useState(() => deepMerge(defaultMedia(), readLocalMediaOverride()));
+
+  useEffect(() => {
+    setMediaState(deepMerge(defaultMedia(), readLocalMediaOverride()));
+    if (!FIREBASE_ENABLED) return;
+    let unsub = () => {};
+    (async () => {
+      try {
+        const { initializeApp, getApps } = await import("firebase/app");
+        const { getFirestore, doc, onSnapshot } = await import("firebase/firestore");
+        const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        unsub = onSnapshot(
+          doc(db, MEDIA_COLLECTION, MEDIA_DOC_ID),
+          (snap) => { if (snap.exists()) setMediaState(deepMerge(defaultMedia(), snap.data())); },
+          () => {}
+        );
+      } catch (err) {
+        console.warn("Firestore media unavailable, using local/default.", err);
+      }
+    })();
+    return () => unsub();
+  }, []);
+
+  return [media];
+}
+
+export async function saveSiteMedia(media) {
+  try { localStorage.setItem(MEDIA_STORAGE_KEY, JSON.stringify(media)); } catch {}
+  if (!FIREBASE_ENABLED) return { ok: true, target: "local" };
+  try {
+    const { initializeApp, getApps } = await import("firebase/app");
+    const { getFirestore, doc, setDoc } = await import("firebase/firestore");
+    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    await setDoc(doc(db, MEDIA_COLLECTION, MEDIA_DOC_ID), media);
+    return { ok: true, target: "firebase" };
+  } catch (err) {
+    console.error(err);
+    return { ok: false, target: "firebase", error: err };
+  }
+}
+
+export function resetSiteMedia() {
+  try { localStorage.removeItem(MEDIA_STORAGE_KEY); } catch {}
+}
+
+// Downscales an uploaded file client-side before storing it, so a phone photo
+// doesn't blow past localStorage/Firestore size limits. Returns a JPEG Blob.
+function resizeImageFile(file, maxDim = 1600, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const ratio = Math.min(maxDim / width, maxDim / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+      canvas.toBlob((blob) => { URL.revokeObjectURL(url); resolve(blob); }, "image/jpeg", quality);
+    };
+    img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+    img.src = url;
+  });
+}
+
+function blobToDataURL(blob) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+}
+
+// Tries Firebase Storage first (small download-URL string, no size worries);
+// falls back to an inline data: URL (works with zero setup, but counts against
+// localStorage's ~5-10MB quota and Firestore's 1MiB-per-document limit).
+async function uploadStageImage(file) {
+  const blob = await resizeImageFile(file);
+  if (FIREBASE_ENABLED) {
+    try {
+      const { initializeApp, getApps } = await import("firebase/app");
+      const { getStorage, ref, uploadBytes, getDownloadURL } = await import("firebase/storage");
+      const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+      const storage = getStorage(app);
+      const path = `site-media/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, blob);
+      return await getDownloadURL(storageRef);
+    } catch (err) {
+      console.warn("Firebase Storage upload failed, falling back to an inline image.", err);
+    }
+  }
+  return blobToDataURL(blob);
+}
+
+// =====================================================================================
 // Global styles
 // =====================================================================================
 export function GlobalStyles() {
@@ -546,7 +681,7 @@ export function GlobalStyles() {
       .rpa-wrap{ max-width:1120px; margin:0 auto; padding:0 28px; }
       a{ color:inherit; }
 
-      .rpa-nav{ position:sticky; top:0; z-index:40; background:rgba(253,242,222,0.85); backdrop-filter:blur(10px); border-bottom:1px solid var(--rpa-line); }
+      .rpa-nav{ position:sticky; top:0; z-index:40; background:rgba(255,255,255,0.85); backdrop-filter:blur(10px); border-bottom:1px solid var(--rpa-line); }
       .rpa-nav-bar{ display:flex; align-items:center; justify-content:space-between; padding:16px 28px; max-width:1120px; margin:0 auto; }
       .rpa-brand{ display:flex; align-items:center; gap:10px; text-decoration:none; font-family:'Space Grotesk',sans-serif; font-weight:700; color:var(--rpa-ink); }
       .rpa-brand .dot{ width:10px; height:10px; border-radius:50%; background:var(--rpa-primary); }
@@ -579,6 +714,8 @@ export function GlobalStyles() {
       .rpa-btn.solid{ background:var(--rpa-primary); border-color:var(--rpa-primary); color:#fff; }
       .rpa-btn.solid:hover{ background:var(--rpa-primary-dark); border-color:var(--rpa-primary-dark); }
       .rpa-btn:not(.solid):hover{ background:var(--rpa-paper-dim); }
+      .rpa-arrow-link{ display:inline-flex; align-items:center; gap:6px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:0.94rem; color:var(--rpa-primary); text-decoration:none; padding:13px 4px; }
+      .rpa-arrow-link:hover{ text-decoration:underline; }
 
       .rpa-journey{ position:relative; padding-top:24px; }
       .rpa-rail{ position:sticky; top:90px; width:52px; height:calc(100vh - 140px); display:flex; flex-direction:column; align-items:center; flex:none; }
@@ -598,15 +735,17 @@ export function GlobalStyles() {
       .rpa-block:first-of-type{ border-top:none; }
       .rpa-block h4{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:1rem; margin:0 0 4px; }
       .rpa-block p{ color:var(--rpa-ink-soft); margin:0; font-size:0.95rem; }
-      .rpa-stage-art{ border-radius:20px; border:1px solid var(--rpa-line); background:#fff; padding:20px; }
+      .rpa-stage-art{ border-radius:20px; border:1px solid var(--rpa-line); background:#fff; padding:20px; box-shadow:0 1px 3px rgba(15,23,42,0.05); }
       .rpa-stage-art img{ width:100%; border-radius:12px; display:block; }
+      .rpa-stage-art-frame{ position:relative; width:100%; aspect-ratio:4/3; overflow:hidden; border-radius:12px; background:var(--rpa-paper-dim); }
+      .rpa-stage-art-frame img{ width:100%; height:100%; object-fit:cover; border-radius:0; transition:transform .15s ease, object-position .15s ease; }
       @media (max-width:860px){ .rpa-stage{ grid-template-columns:1fr; direction:ltr !important; } .rpa-stage > *{ direction:ltr !important; } }
 
       .rpa-section{ padding:72px 0; border-top:1px solid var(--rpa-line); scroll-margin-top:90px; }
       .rpa-section-head{ margin-bottom:32px; }
       .rpa-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
       @media (max-width:820px){ .rpa-grid{ grid-template-columns:1fr; } }
-      .rpa-card{ border:1px solid var(--rpa-line); border-radius:18px; background:#fff; padding:24px; transition:transform .15s ease, box-shadow .15s ease; }
+      .rpa-card{ border:1px solid var(--rpa-line); border-radius:18px; background:#fff; padding:24px; box-shadow:0 1px 3px rgba(15,23,42,0.05); transition:transform .15s ease, box-shadow .15s ease; }
       .rpa-card:hover{ transform:translateY(-3px); box-shadow:0 12px 28px rgba(20,27,46,0.08); }
       .rpa-card .rpa-tag{ font-family:'JetBrains Mono',monospace; font-size:0.74rem; color:var(--rpa-primary-dark); background:var(--rpa-primary-soft); padding:3px 9px; border-radius:999px; }
       .rpa-card h3{ font-size:1.05rem; margin:12px 0 6px; }
@@ -690,11 +829,21 @@ function StagePlaceholderArt({ index, caption }) {
   );
 }
 
-function StageArt({ stageId, index, caption }) {
-  const src = ASSETS[stageId];
+function StageArt({ stageId, index, caption, image }) {
+  const img = image || { src: null, scale: 1, x: 50, y: 50 };
   return (
     <div className="rpa-stage-art">
-      {src ? <img src={src} alt={`${stageId} illustration`} /> : <StagePlaceholderArt index={index} caption={caption} />}
+      {img.src ? (
+        <div className="rpa-stage-art-frame">
+          <img
+            src={img.src}
+            alt={`${stageId} illustration`}
+            style={{ transform: `scale(${img.scale})`, objectPosition: `${img.x}% ${img.y}%` }}
+          />
+        </div>
+      ) : (
+        <StagePlaceholderArt index={index} caption={caption} />
+      )}
     </div>
   );
 }
@@ -804,6 +953,7 @@ function ProgressRail({ activeId }) {
 function HomeSection() {
   const [lang, setLang] = useLanguage();
   const [t] = useSiteContent(lang);
+  const [media] = useSiteMedia();
   const sectionIds = useMemo(() => ["home", ...STAGE_META.map((s) => s.id), "news", "projects"], []);
   const active = useScrollSpy(sectionIds);
   const news = t.news.items;
@@ -821,7 +971,7 @@ function HomeSection() {
           <p className="lede">{t.heroLede}</p>
           <div className="rpa-cta-row">
             <Link className="rpa-btn solid" to="/contact">{t.ctaStart} <ArrowUpRight size={16} /></Link>
-            <a className="rpa-btn" href="#identify" onClick={(e) => scrollToSection(e, "identify")}>{t.ctaProcess}</a>
+            <a className="rpa-arrow-link" href="#identify" onClick={(e) => scrollToSection(e, "identify")}>{t.ctaProcess} →</a>
           </div>
         </div>
       </section>
@@ -844,7 +994,7 @@ function HomeSection() {
                     <Block key={bi} heading={b.heading} body={b.body} />
                   ))}
                 </div>
-                <StageArt stageId={meta.id} index={i} caption={t.stagePlaceholder(String(i + 1).padStart(2, "0"))} />
+                <StageArt stageId={meta.id} index={i} caption={t.stagePlaceholder(String(i + 1).padStart(2, "0"))} image={media.stages[meta.id]} />
               </section>
             );
           })}
@@ -1111,6 +1261,74 @@ function TextAreaField({ label, value, onChange }) {
   );
 }
 
+// Upload (or paste a URL), then rescale and reposition the crop. `value` is
+// {src, scale, x, y} — see the "Media" section near the top of this file for
+// what each field means and how it's persisted.
+function ImageEditor({ label, value, onChange }) {
+  const v = value || { src: null, scale: 1, x: 50, y: 50 };
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function handleFile(file) {
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const src = await uploadStageImage(file);
+      onChange({ ...v, src });
+    } catch (err) {
+      console.error(err);
+      setError("Couldn't process that image — try a different file.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="adm-list">
+      <div className="adm-list-label">{label}</div>
+      <div className="adm-image-row">
+        <div className="adm-image-preview">
+          {v.src
+            ? <img src={v.src} alt="" style={{ transform: `scale(${v.scale})`, objectPosition: `${v.x}% ${v.y}%` }} />
+            : <span className="adm-muted">No image — placeholder art shows instead</span>}
+        </div>
+        <div className="adm-image-controls">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => { handleFile(e.target.files?.[0]); e.target.value = ""; }}
+          />
+          {uploading && <span className="adm-muted">Processing…</span>}
+          {error && <span className="adm-status error">{error}</span>}
+          <TextField
+            label="…or paste an image URL instead"
+            value={v.src && !v.src.startsWith("data:") ? v.src : ""}
+            onChange={(val) => onChange({ ...v, src: val || null })}
+          />
+          <div className="adm-field">
+            <label>Zoom ({Math.round(v.scale * 100)}%)</label>
+            <input type="range" min="100" max="250" value={Math.round(v.scale * 100)} onChange={(e) => onChange({ ...v, scale: Number(e.target.value) / 100 })} />
+          </div>
+          <div className="adm-field">
+            <label>Reposition — horizontal ({v.x}%)</label>
+            <input type="range" min="0" max="100" value={v.x} onChange={(e) => onChange({ ...v, x: Number(e.target.value) })} />
+          </div>
+          <div className="adm-field">
+            <label>Reposition — vertical ({v.y}%)</label>
+            <input type="range" min="0" max="100" value={v.y} onChange={(e) => onChange({ ...v, y: Number(e.target.value) })} />
+          </div>
+          {v.src && (
+            <button type="button" className="adm-remove" onClick={() => onChange({ src: null, scale: 1, x: 50, y: 50 })}>
+              Remove image
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // {heading, body} list — used for stage blocks, About timeline, Contact details
 function HeadingBodyListEditor({ label, items, onChange, headingLabel = "Heading", bodyLabel = "Body" }) {
   function update(i, key, val) {
@@ -1244,6 +1462,13 @@ function AdminStyles() {
       .adm-list-item:first-of-type{ border-top:none; padding-top:0; }
       .adm-list-item input, .adm-list-item textarea{ width:100%; font-family:'Inter',sans-serif; font-size:0.94rem; padding:9px 11px; border:1.5px solid var(--rpa-line); border-radius:8px; }
       .adm-list-item textarea{ min-height:60px; resize:vertical; }
+      .adm-image-row{ display:flex; gap:20px; flex-wrap:wrap; }
+      .adm-image-preview{ width:180px; height:135px; flex:none; border:1px solid var(--rpa-line); border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center; background:var(--rpa-paper-dim); text-align:center; padding:8px; }
+      .adm-image-preview img{ width:100%; height:100%; object-fit:cover; }
+      .adm-image-preview span{ font-size:0.78rem; color:var(--rpa-ink-soft); }
+      .adm-image-controls{ flex:1; min-width:240px; display:flex; flex-direction:column; gap:12px; }
+      .adm-image-controls input[type="range"]{ width:100%; accent-color:var(--rpa-primary); }
+      .adm-image-controls input[type="file"]{ font-size:0.85rem; }
       .adm-remove{ align-self:flex-start; font-family:'JetBrains Mono',monospace; font-size:0.76rem; color:#B3261E; background:none; border:1px solid #B3261E; border-radius:999px; padding:4px 11px; cursor:pointer; }
       .adm-add{ font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--rpa-primary-dark); background:var(--rpa-primary-soft); border:1px solid var(--rpa-primary); border-radius:999px; padding:7px 14px; cursor:pointer; margin-top:8px; }
       .adm-chips{ display:flex; flex-wrap:wrap; gap:8px; }
@@ -1251,7 +1476,7 @@ function AdminStyles() {
       .adm-chip button{ background:none; border:none; cursor:pointer; color:var(--rpa-ink-soft); font-size:1rem; line-height:1; padding:0 4px; }
       .adm-chip-add{ display:flex; gap:8px; margin-top:12px; }
       .adm-chip-add input{ flex:1; padding:9px 11px; border:1.5px solid var(--rpa-line); border-radius:8px; }
-      .adm-savebar{ position:sticky; bottom:0; background:rgba(253,242,222,0.92); backdrop-filter:blur(10px); border-top:1px solid var(--rpa-line); padding:14px 0; }
+      .adm-savebar{ position:sticky; bottom:0; background:rgba(255,255,255,0.92); backdrop-filter:blur(10px); border-top:1px solid var(--rpa-line); padding:14px 0; }
       .adm-savebar-inner{ display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
       .adm-status{ font-family:'JetBrains Mono',monospace; font-size:0.85rem; }
       .adm-status.ok{ color:var(--rpa-primary-dark); }
@@ -1292,6 +1517,7 @@ function AdminSection() {
 
   const [lang, setLang] = useState(LANGUAGES[0].code);
   const [draft, setDraft] = useState(() => getEditableContent(lang));
+  const [mediaDraft, setMediaDraft] = useState(() => getEditableMedia());
   const [tab, setTab] = useState("general");
   const [status, setStatus] = useState(null);
 
@@ -1310,18 +1536,33 @@ function AdminSection() {
     });
   }
 
+  function setMedia(path, value) {
+    setMediaDraft((prev) => {
+      const clone = cloneContent(prev);
+      let node = clone;
+      for (let i = 0; i < path.length - 1; i++) node = node[path[i]];
+      node[path[path.length - 1]] = value;
+      return clone;
+    });
+  }
+
   async function handleSave() {
     setStatus({ type: "pending", message: "Saving…" });
-    const res = await saveSiteContent(lang, draft);
+    const [contentRes, mediaRes] = await Promise.all([
+      saveSiteContent(lang, draft),
+      saveSiteMedia(mediaDraft),
+    ]);
+    const ok = contentRes.ok && mediaRes.ok;
+    const wentLive = contentRes.target === "firebase" && mediaRes.target === "firebase";
     setStatus(
-      res.ok
-        ? { type: "ok", message: res.target === "firebase" ? "Saved to Firebase — live for every visitor." : "Saved in this browser (Firebase not connected — see README.md)." }
+      ok
+        ? { type: "ok", message: wentLive ? "Saved to Firebase — live for every visitor." : "Saved in this browser (Firebase not connected — see README.md)." }
         : { type: "error", message: "Firebase save failed (see console). Your changes are still saved locally." }
     );
   }
 
   function handleReset() {
-    if (!window.confirm("Discard saved overrides and revert this language to the code defaults?")) return;
+    if (!window.confirm("Discard saved overrides and revert this language to the code defaults? (Images are shared across languages and won't be affected — remove them individually in the Journey tab if needed.)")) return;
     resetSiteContent(lang);
     setDraft(getEditableContent(lang));
     setStatus({ type: "ok", message: "Reverted to code defaults." });
@@ -1418,6 +1659,7 @@ function AdminSection() {
                   <TextField label="Title" value={draft.stages[s.id].title} onChange={(v) => set(["stages", s.id, "title"], v)} />
                   <TextAreaField label="Summary" value={draft.stages[s.id].summary} onChange={(v) => set(["stages", s.id, "summary"], v)} />
                   <HeadingBodyListEditor label="Blocks (the sub-sections under this stage)" items={draft.stages[s.id].blocks} onChange={(v) => set(["stages", s.id, "blocks"], v)} />
+                  <ImageEditor label="Stage image (shared across languages)" value={mediaDraft.stages[s.id]} onChange={(v) => setMedia(["stages", s.id], v)} />
                 </div>
               </details>
             ))}
