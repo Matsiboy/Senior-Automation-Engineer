@@ -688,7 +688,7 @@ export function GlobalStyles() {
       .rpa-nav-links{ display:flex; gap:6px; align-items:center; }
       .rpa-nav-links a{ text-decoration:none; font-size:0.86rem; font-family:'JetBrains Mono',monospace; padding:8px 12px; border-radius:999px; color:var(--rpa-ink-soft); transition:all .15s ease; white-space:nowrap; }
       .rpa-nav-links a:hover{ color:var(--rpa-ink); background:var(--rpa-paper-dim); }
-      .rpa-nav-links a.active{ color:#fff; background:var(--rpa-primary); }
+      .rpa-nav-links a.active{ color:var(--rpa-primary); background:none; font-weight:600; }
       .rpa-nav-sub{ display:flex; gap:14px; align-items:center; margin-left:14px; padding-left:14px; border-left:1px solid var(--rpa-line); }
       .rpa-nav-sub a{ font-family:'Inter',sans-serif; font-weight:600; padding:8px 4px; }
       .rpa-nav-toggle{ display:none; background:none; border:none; cursor:pointer; color:var(--rpa-ink); }
@@ -718,6 +718,8 @@ export function GlobalStyles() {
       .rpa-arrow-link:hover{ text-decoration:underline; }
 
       .rpa-journey{ position:relative; padding-top:24px; }
+      .rpa-rail-overlay{ position:absolute; inset:0; pointer-events:none; z-index:2; }
+      .rpa-rail-overlay .rpa-wrap{ position:relative; height:100%; }
       .rpa-rail{ position:sticky; top:90px; width:52px; height:calc(100vh - 140px); display:flex; flex-direction:column; align-items:center; flex:none; }
       .rpa-rail-line{ position:relative; flex:1; width:2px; background:var(--rpa-line); }
       .rpa-rail-fill{ position:absolute; top:0; left:0; width:100%; background:var(--rpa-primary); transition:height .2s ease; }
@@ -725,9 +727,12 @@ export function GlobalStyles() {
       .rpa-rail-dot.active{ background:var(--rpa-primary); border-color:var(--rpa-primary); width:14px; height:14px; }
       @media (max-width:980px){ .rpa-rail{ display:none; } }
 
-      .rpa-stage{ scroll-margin-top:90px; padding:72px 0; border-top:1px solid var(--rpa-line); display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; }
-      .rpa-stage:nth-child(even){ direction:rtl; }
-      .rpa-stage:nth-child(even) > *{ direction:ltr; }
+      .rpa-stage-band{ padding:72px 0; }
+      .rpa-stage-band.alt{ background:var(--rpa-paper-dim); }
+      @media (min-width:981px){ .rpa-stage-band > .rpa-wrap{ padding-left:76px; } }
+      .rpa-stage{ scroll-margin-top:90px; display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; }
+      .rpa-stage.flip{ direction:rtl; }
+      .rpa-stage.flip > *{ direction:ltr; }
       .rpa-stage-icon{ width:46px; height:46px; border-radius:14px; background:var(--rpa-primary-soft); color:var(--rpa-primary); display:flex; align-items:center; justify-content:center; margin-bottom:18px; }
       .rpa-stage h2{ font-size:clamp(1.6rem,2.6vw,2.2rem); }
       .rpa-stage .rpa-summary{ color:var(--rpa-ink-soft); max-width:46ch; margin-bottom:20px; }
@@ -739,9 +744,10 @@ export function GlobalStyles() {
       .rpa-stage-art img{ width:100%; border-radius:12px; display:block; }
       .rpa-stage-art-frame{ position:relative; width:100%; aspect-ratio:4/3; overflow:hidden; border-radius:12px; background:var(--rpa-paper-dim); }
       .rpa-stage-art-frame img{ width:100%; height:100%; object-fit:cover; border-radius:0; transition:transform .15s ease, object-position .15s ease; }
-      @media (max-width:860px){ .rpa-stage{ grid-template-columns:1fr; direction:ltr !important; } .rpa-stage > *{ direction:ltr !important; } }
+      @media (max-width:860px){ .rpa-stage{ grid-template-columns:1fr; } .rpa-stage.flip{ direction:ltr; } .rpa-stage.flip > *{ direction:ltr; } }
 
-      .rpa-section{ padding:72px 0; border-top:1px solid var(--rpa-line); scroll-margin-top:90px; }
+      .rpa-section{ padding:72px 0; scroll-margin-top:90px; }
+      .rpa-section.alt{ background:var(--rpa-paper-dim); }
       .rpa-section-head{ margin-bottom:32px; }
       .rpa-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
       @media (max-width:820px){ .rpa-grid{ grid-template-columns:1fr; } }
@@ -976,29 +982,36 @@ function HomeSection() {
         </div>
       </section>
 
-      <div className="rpa-journey rpa-wrap" style={{ display: "flex", gap: 24 }}>
-        <ProgressRail activeId={active} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {STAGE_META.map((meta, i) => {
-            const Icon = meta.icon;
-            const stage = t.stages[meta.id];
-            return (
-              <section className="rpa-stage" id={meta.id} key={meta.id}>
-                <div>
-                  <div className="rpa-stage-icon"><Icon size={22} /></div>
-                  <div className="rpa-kicker">{stage.kicker}</div>
-                  <h2 className="rpa-h">{stage.title}</h2>
-                  <p className="rpa-summary">{stage.summary}</p>
-                  {/* Add more entries to CONTENT[lang].stages.<id>.blocks to extend this stage */}
-                  {stage.blocks.map((b, bi) => (
-                    <Block key={bi} heading={b.heading} body={b.body} />
-                  ))}
-                </div>
-                <StageArt stageId={meta.id} index={i} caption={t.stagePlaceholder(String(i + 1).padStart(2, "0"))} image={media.stages[meta.id]} />
-              </section>
-            );
-          })}
+      <div className="rpa-journey">
+        <div className="rpa-rail-overlay">
+          <div className="rpa-wrap">
+            <ProgressRail activeId={active} />
+          </div>
         </div>
+        {STAGE_META.map((meta, i) => {
+          const Icon = meta.icon;
+          const stage = t.stages[meta.id];
+          const flipped = i % 2 === 1;
+          return (
+            <div className={`rpa-stage-band${flipped ? " alt" : ""}`} key={meta.id}>
+              <div className="rpa-wrap">
+                <section className={`rpa-stage${flipped ? " flip" : ""}`} id={meta.id}>
+                  <div>
+                    <div className="rpa-stage-icon"><Icon size={22} /></div>
+                    <div className="rpa-kicker">{stage.kicker}</div>
+                    <h2 className="rpa-h">{stage.title}</h2>
+                    <p className="rpa-summary">{stage.summary}</p>
+                    {/* Add more entries to CONTENT[lang].stages.<id>.blocks to extend this stage */}
+                    {stage.blocks.map((b, bi) => (
+                      <Block key={bi} heading={b.heading} body={b.body} />
+                    ))}
+                  </div>
+                  <StageArt stageId={meta.id} index={i} caption={t.stagePlaceholder(String(i + 1).padStart(2, "0"))} image={media.stages[meta.id]} />
+                </section>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <section className="rpa-section" id="news">
@@ -1019,7 +1032,7 @@ function HomeSection() {
         </div>
       </section>
 
-      <section className="rpa-section" id="projects">
+      <section className="rpa-section alt" id="projects">
         <div className="rpa-wrap">
           <div className="rpa-section-head">
             <div className="rpa-kicker">{t.projects.kicker}</div>
