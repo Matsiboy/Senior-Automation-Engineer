@@ -46,7 +46,7 @@ import {
 // ---------------------------------------------------------------------------
 // FIREBASE (optional — off by default so the site works with zero setup)
 // ---------------------------------------------------------------------------
-export const FIREBASE_ENABLED = false; // flip to true once firebaseConfig is filled in
+export const FIREBASE_ENABLED = true; // flip to true once firebaseConfig is filled in
 
 export const firebaseConfig = {
   apiKey: "AIzaSyD9LFCTjC9KNoNBCKXuglTiMBT8Nt4mxFM",
