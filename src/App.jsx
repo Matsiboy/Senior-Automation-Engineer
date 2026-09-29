@@ -656,10 +656,15 @@ async function uploadStageImage(file) {
       const storage = getStorage(app);
       const path = `site-media/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
       const storageRef = ref(storage, path);
-      await uploadBytes(storageRef, blob);
+      // Firebase Storage retries failed uploads internally with its own
+      // backoff, which can run well past our outer safety timeout — racing
+      // against a short timeout here means a blocked/failing upload gives up
+      // and falls through to the inline-image path quickly instead of the
+      // whole thing eventually erroring out with nothing saved.
+      await withTimeout(uploadBytes(storageRef, blob), 8000, "storage-timeout");
       return await getDownloadURL(storageRef);
     } catch (err) {
-      console.warn("Firebase Storage upload failed, falling back to an inline image.", err);
+      console.warn("Firebase Storage upload failed or timed out, falling back to an inline image.", err);
     }
   }
   return blobToDataURL(blob);
@@ -737,7 +742,7 @@ export function GlobalStyles() {
       .rpa-rail-dot.active{ background:var(--rpa-primary); border-color:var(--rpa-primary); width:14px; height:14px; }
       @media (max-width:980px){ .rpa-rail{ display:none; } }
 
-      .rpa-stage-band{ padding:72px 0; }
+      .rpa-stage-band{ padding:72px 0; scroll-margin-top:90px; }
       .rpa-stage-band.alt{ background:var(--rpa-paper-dim); }
       @media (min-width:981px){ .rpa-stage-band > .rpa-wrap{ padding-left:76px; } }
       .rpa-stage{ scroll-margin-top:90px; display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; }
@@ -1003,9 +1008,9 @@ function HomeSection() {
           const stage = t.stages[meta.id];
           const flipped = i % 2 === 1;
           return (
-            <div className={`rpa-stage-band${flipped ? " alt" : ""}`} key={meta.id}>
+            <div className={`rpa-stage-band${flipped ? " alt" : ""}`} key={meta.id} id={meta.id}>
               <div className="rpa-wrap">
-                <section className={`rpa-stage${flipped ? " flip" : ""}`} id={meta.id}>
+                <section className={`rpa-stage${flipped ? " flip" : ""}`}>
                   <div>
                     <div className="rpa-stage-icon"><Icon size={22} /></div>
                     <div className="rpa-kicker">{stage.kicker}</div>
