@@ -53,7 +53,8 @@ export const firebaseConfig = {
   authDomain: "senior-automation-engineer.firebaseapp.com",
   projectId: "senior-automation-engineer",
   storageBucket: "senior-automation-engineer.firebasestorage.app",
-  messagingSenderId: "1:175332574553:web:38905f1fdc2d3025073848",
+  messagingSenderId: "175332574553",
+  appId: "1:175332574553:web:38905f1fdc2d3025073848",
 };
 
 // ---------------------------------------------------------------------------
@@ -632,6 +633,16 @@ function blobToDataURL(blob) {
   });
 }
 
+// Guarantees a promise settles within `ms`, rejecting with `new Error(message)`
+// otherwise. Used so an image upload/resize can never leave the admin panel
+// stuck on "Processing…" forever, regardless of what actually goes wrong.
+function withTimeout(promise, ms, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+  ]);
+}
+
 // Tries Firebase Storage first (small download-URL string, no size worries);
 // falls back to an inline data: URL (works with zero setup, but counts against
 // localStorage's ~5-10MB quota and Firestore's 1MiB-per-document limit).
@@ -706,7 +717,7 @@ export function GlobalStyles() {
       .rpa-hero::before{ content:""; position:absolute; top:-120px; right:-120px; width:420px; height:420px; border-radius:50%; background:radial-gradient(circle,var(--rpa-primary-soft) 0%,transparent 70%); z-index:0; }
       .rpa-hero .rpa-wrap{ position:relative; z-index:1; }
       .rpa-kicker{ font-family:'JetBrains Mono',monospace; font-size:0.82rem; color:var(--rpa-primary-dark); margin-bottom:16px; }
-      .rpa-hero h1{ font-size:clamp(2.1rem,4.4vw,3.5rem); max-width:16ch; }
+      .rpa-hero h1{ font-size:clamp(1.9rem,3.2vw,2.75rem); line-height:1.22; letter-spacing:-0.015em; max-width:24ch; }
       .rpa-hero .lede{ font-size:1.1rem; color:var(--rpa-ink-soft); max-width:52ch; }
       .rpa-cta-row{ display:flex; gap:14px; flex-wrap:wrap; margin-top:8px; }
       .rpa-btn{ display:inline-flex; align-items:center; gap:8px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:0.94rem; padding:13px 24px; border-radius:999px; text-decoration:none; border:1.5px solid var(--rpa-ink); color:var(--rpa-ink); transition:all .15s ease; }
