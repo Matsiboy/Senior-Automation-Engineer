@@ -46,14 +46,14 @@ import {
 // ---------------------------------------------------------------------------
 // FIREBASE (optional — off by default so the site works with zero setup)
 // ---------------------------------------------------------------------------
-export const FIREBASE_ENABLED = true; // flip to true once firebaseConfig is filled in
+export const FIREBASE_ENABLED = false; // flip to true once firebaseConfig is filled in
 
 export const firebaseConfig = {
-  apiKey: "AIzaSyD9LFCTjC9KNoNBCKXuglTiMBT8Nt4mxFM",
-  authDomain: "senior-automation-engineer.firebaseapp.com",
-  projectId: "senior-automation-engineer",
-  storageBucket: "senior-automation-engineer.firebasestorage.app",
-  messagingSenderId: "1:175332574553:web:38905f1fdc2d3025073848",
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
   appId: "YOUR_APP_ID",
 };
 
@@ -1250,7 +1250,13 @@ function ContactSection() {
 const ADMIN_PASSPHRASE = "changeme"; // change this, and read the security note above
 
 function cloneContent(value) {
-  return typeof structuredClone === "function" ? structuredClone(value) : JSON.parse(JSON.stringify(value));
+  // JSON round-trip on purpose, not structuredClone: CONTENT includes a small
+  // helper function (stagePlaceholder) that structuredClone throws on.
+  // JSON.stringify silently drops function-valued keys instead, which is
+  // exactly what we want — the admin draft never needs to carry that function
+  // around, and useSiteContent's deepMerge restores it from CONTENT[lang]
+  // automatically when the edited content is read back.
+  return JSON.parse(JSON.stringify(value));
 }
 
 // ---------------------------------------------------------------------------
@@ -1284,14 +1290,28 @@ function ImageEditor({ label, value, onChange }) {
 
   async function handleFile(file) {
     if (!file) return;
-    setUploading(true);
     setError(null);
+
+    // Browsers generally can't decode HEIC/HEIF (the default format on modern
+    // iPhones) via <img>, which used to make this hang forever with no error —
+    // catch it up front instead of trying and timing out.
+    const name = file.name.toLowerCase();
+    if (file.type === "image/heic" || file.type === "image/heif" || name.endsWith(".heic") || name.endsWith(".heif")) {
+      setError("That's a HEIC/HEIF photo (the iPhone default) — browsers can't read this format. Convert it to JPG/PNG first, or switch your iPhone's Camera settings to \"Most Compatible\", then try again.");
+      return;
+    }
+
+    setUploading(true);
     try {
-      const src = await uploadStageImage(file);
+      const src = await withTimeout(uploadStageImage(file), 20000, "timeout");
       onChange({ ...v, src });
     } catch (err) {
       console.error(err);
-      setError("Couldn't process that image — try a different file.");
+      setError(
+        err?.message === "timeout"
+          ? "That took too long to process — try a smaller image or a different file format."
+          : "Couldn't process that image — try a different file."
+      );
     } finally {
       setUploading(false);
     }
