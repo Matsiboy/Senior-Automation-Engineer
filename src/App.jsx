@@ -1784,6 +1784,7 @@ function AdminSection() {
 // Root router — mounted by main.jsx inside a <HashRouter>. This is the only
 // thing main.jsx imports from this file.
 // =====================================================================================
+//
 export default function App() {
   return (
     <Routes>
