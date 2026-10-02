@@ -733,18 +733,8 @@ export function GlobalStyles() {
       .rpa-arrow-link:hover{ text-decoration:underline; }
 
       .rpa-journey{ position:relative; padding-top:24px; }
-      .rpa-rail-overlay{ position:absolute; inset:0; pointer-events:none; z-index:2; }
-      .rpa-rail-overlay .rpa-wrap{ position:relative; height:100%; }
-      .rpa-rail{ position:sticky; top:90px; width:52px; height:calc(100vh - 140px); display:flex; flex-direction:column; align-items:center; flex:none; }
-      .rpa-rail-line{ position:relative; flex:1; width:2px; background:var(--rpa-line); }
-      .rpa-rail-fill{ position:absolute; top:0; left:0; width:100%; background:var(--rpa-primary); transition:height .2s ease; }
-      .rpa-rail-dot{ position:absolute; left:50%; transform:translate(-50%,-50%); width:10px; height:10px; border-radius:50%; background:var(--rpa-paper); border:2px solid var(--rpa-line); transition:all .2s ease; }
-      .rpa-rail-dot.active{ background:var(--rpa-primary); border-color:var(--rpa-primary); width:14px; height:14px; }
-      @media (max-width:980px){ .rpa-rail{ display:none; } }
-
       .rpa-stage-band{ padding:72px 0; scroll-margin-top:90px; }
       .rpa-stage-band.alt{ background:var(--rpa-paper-dim); }
-      @media (min-width:981px){ .rpa-stage-band > .rpa-wrap{ padding-left:76px; } }
       .rpa-stage{ scroll-margin-top:90px; display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; }
       .rpa-stage.flip{ direction:rtl; }
       .rpa-stage.flip > *{ direction:ltr; }
@@ -947,28 +937,6 @@ function TopNav({ activeId, t, lang, setLang }) {
 }
 
 // =====================================================================================
-// Progress rail
-// =====================================================================================
-function ProgressRail({ activeId }) {
-  const activeIndex = STAGE_META.findIndex((s) => s.id === activeId);
-  const pct = activeIndex >= 0 ? ((activeIndex + 1) / STAGE_META.length) * 100 : 0;
-  return (
-    <div className="rpa-rail" aria-hidden="true">
-      <div className="rpa-rail-line">
-        <div className="rpa-rail-fill" style={{ height: `${pct}%` }} />
-        {STAGE_META.map((s, i) => (
-          <div
-            key={s.id}
-            className={`rpa-rail-dot${s.id === activeId ? " active" : ""}`}
-            style={{ top: `${(i / (STAGE_META.length - 1)) * 100}%` }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// =====================================================================================
 // Main app
 // =====================================================================================
 function HomeSection() {
@@ -998,11 +966,6 @@ function HomeSection() {
       </section>
 
       <div className="rpa-journey">
-        <div className="rpa-rail-overlay">
-          <div className="rpa-wrap">
-            <ProgressRail activeId={active} />
-          </div>
-        </div>
         {STAGE_META.map((meta, i) => {
           const Icon = meta.icon;
           const stage = t.stages[meta.id];
