@@ -36,7 +36,7 @@
 //   8. Default export `App` — composes the four routes above (mounted by main.jsx)
 // =====================================================================================
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Routes, Route } from "react-router-dom";
 import {
   Search, ClipboardList, Compass, Code2, FlaskConical, Rocket, Activity,
@@ -720,10 +720,33 @@ export function GlobalStyles() {
 
       .rpa-hero{ position:relative; padding:96px 0 72px; overflow:hidden; }
       .rpa-hero::before{ content:""; position:absolute; top:-120px; right:-120px; width:420px; height:420px; border-radius:50%; background:radial-gradient(circle,var(--rpa-primary-soft) 0%,transparent 70%); z-index:0; }
-      .rpa-hero .rpa-wrap{ position:relative; z-index:1; }
+      .rpa-hero .rpa-wrap{ position:relative; z-index:1; display:grid; grid-template-columns:1.15fr 0.85fr; gap:40px; align-items:center; }
+      @media (max-width:900px){ .rpa-hero .rpa-wrap{ grid-template-columns:1fr; } .hero-anim{ display:none; } }
       .rpa-kicker{ font-family:'JetBrains Mono',monospace; font-size:0.82rem; color:var(--rpa-primary-dark); margin-bottom:16px; }
       .rpa-hero h1{ font-size:clamp(1.9rem,3.2vw,2.75rem); line-height:1.22; letter-spacing:-0.015em; max-width:24ch; }
       .rpa-hero .lede{ font-size:1.1rem; color:var(--rpa-ink-soft); max-width:52ch; }
+
+      /* Hero animation: 8-node snake grid with a pulse that travels the loop.
+         Every segment between consecutive nodes is exactly 120 units (4 across,
+         1 down, 4 back), so a linear-speed dot and linear-fraction node timing
+         (i/7) stay mathematically in sync — this is what fixes the drift. */
+      .hero-anim{ width:100%; }
+      .hero-anim svg{ width:100%; height:auto; overflow:visible; }
+      .hero-anim .ha-dash{ stroke:var(--rpa-line); stroke-width:1.6; stroke-dasharray:4 5; fill:none; }
+      .hero-anim .ha-circle{ fill:var(--rpa-paper); stroke:var(--rpa-line); stroke-width:1.6; transition:stroke .2s ease; }
+      .hero-anim .ha-node.lit .ha-circle{ stroke:var(--rpa-primary); }
+      .hero-anim .ha-icon{ stroke:var(--rpa-primary); fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+      .hero-anim .ha-label{ font-family:'JetBrains Mono',monospace; font-size:9.5px; fill:var(--rpa-ink-soft); }
+      .hero-anim .ha-dot{
+        offset-path: path("M44,44 L164,44 L284,44 L404,44 L404,164 L284,164 L164,164 L44,164");
+        animation: haTravel 11s linear infinite;
+      }
+      @keyframes haTravel{
+        0%{ offset-distance:0%; opacity:0; }
+        3%{ offset-distance:0%; opacity:1; }
+        88%{ offset-distance:100%; opacity:1; }
+        92%,100%{ offset-distance:100%; opacity:0; }
+      }
       .rpa-cta-row{ display:flex; gap:14px; flex-wrap:wrap; margin-top:8px; }
       .rpa-btn{ display:inline-flex; align-items:center; gap:8px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:0.94rem; padding:13px 24px; border-radius:999px; text-decoration:none; border:1.5px solid var(--rpa-ink); color:var(--rpa-ink); transition:all .15s ease; }
       .rpa-btn.solid{ background:var(--rpa-primary); border-color:var(--rpa-primary); color:#fff; }
@@ -859,6 +882,70 @@ function StageArt({ stageId, index, caption, image }) {
   );
 }
 
+// Node centers, in the exact order the dot travels them. Every consecutive
+// pair is 120 units apart (see the offset-path in GlobalStyles) so that a
+// constant-speed dot and linear-fraction node timing (i/7) land in sync.
+const HERO_ANIM_NODES = [
+  { x: 44, y: 44 }, { x: 164, y: 44 }, { x: 284, y: 44 }, { x: 404, y: 44 },
+  { x: 404, y: 164 }, { x: 284, y: 164 }, { x: 164, y: 164 }, { x: 44, y: 164 },
+];
+
+function HeroAnimIcon({ i }) {
+  // Tiny hand-drawn glyphs, same visual language as the stage placeholder art.
+  switch (i) {
+    case 0: return <g className="ha-icon" transform="translate(-7,-7)"><circle cx="6" cy="6" r="6" /><line x1="10.5" y1="10.5" x2="15" y2="15" /></g>; // Identify
+    case 1: return <g className="ha-icon" transform="translate(-7,-9)"><rect x="0" y="0" width="14" height="18" rx="1.5" /><line x1="3" y1="5" x2="11" y2="5" /><line x1="3" y1="9" x2="11" y2="9" /><line x1="3" y1="13" x2="8" y2="13" /></g>; // Assess
+    case 2: return <g className="ha-icon"><circle r="9" /><path d="M-3,-3 L3,3 M3,-3 L2,2" /></g>; // Design
+    case 3: return <g className="ha-icon" transform="translate(-9,-6)"><path d="M5 0 L0 6 L5 12" /><path d="M13 0 L18 6 L13 12" /></g>; // Develop
+    case 4: return <g className="ha-icon" transform="translate(-6,-9)"><path d="M4 0 L4 6 L0 16 Q6 19 12 16 L8 6 L8 0" /></g>; // Test
+    case 5: return <g className="ha-icon" transform="translate(-6,-10)"><path d="M6 20 C2 14 2 6 6 0 C10 6 10 14 6 20 Z" /><circle cx="6" cy="7" r="1.6" /></g>; // Deploy
+    case 6: return <g className="ha-icon" transform="translate(-11,-5)"><path d="M0 5 L5 5 L8 -4 L13 12 L16 5 L22 5" /></g>; // Monitor
+    default: return <g className="ha-icon" transform="translate(-9,-7)"><path d="M0 12 L6 4 L10 8 L18 -2" /><path d="M12 -2 L18 -2 L18 4" /></g>; // Improve
+  }
+}
+
+function HeroAnimation({ labels }) {
+  const nodeRefs = useRef([]);
+
+  useEffect(() => {
+    const LOOP = 11; // seconds — must match the CSS animation duration
+    const travelStart = LOOP * 0.03;
+    const travelEnd = LOOP * 0.88;
+    const span = travelEnd - travelStart;
+    let raf;
+    const start = performance.now();
+
+    function frame(now) {
+      const elapsed = ((now - start) / 1000) % LOOP;
+      nodeRefs.current.forEach((el, i) => {
+        if (!el) return;
+        const t = travelStart + span * (i / (HERO_ANIM_NODES.length - 1));
+        const lit = elapsed >= t && elapsed <= Math.min(t + 1.0, travelEnd + 0.3);
+        el.classList.toggle("lit", lit);
+      });
+      raf = requestAnimationFrame(frame);
+    }
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return (
+    <div className="hero-anim" aria-hidden="true">
+      <svg viewBox="0 0 448 215" xmlns="http://www.w3.org/2000/svg">
+        <path className="ha-dash" d="M44,44 L164,44 L284,44 L404,44 L404,164 L284,164 L164,164 L44,164" />
+        {HERO_ANIM_NODES.map((n, i) => (
+          <g key={i} ref={(el) => (nodeRefs.current[i] = el)} className="ha-node" transform={`translate(${n.x},${n.y})`}>
+            <circle r="20" className="ha-circle" />
+            <HeroAnimIcon i={i} />
+            <text y="36" textAnchor="middle" className="ha-label">{labels[i]}</text>
+          </g>
+        ))}
+        <circle className="ha-dot" r="4.5" fill="var(--rpa-primary)" />
+      </svg>
+    </div>
+  );
+}
+
 function useScrollSpy(ids, offset = 130) {
   const [active, setActive] = useState(ids[0]);
   useEffect(() => {
@@ -955,13 +1042,16 @@ function HomeSection() {
 
       <section className="rpa-hero" id="home">
         <div className="rpa-wrap">
-          <div className="rpa-kicker">{t.role.toUpperCase()}</div>
-          <h1 className="rpa-h">{t.tagline}</h1>
-          <p className="lede">{t.heroLede}</p>
-          <div className="rpa-cta-row">
-            <Link className="rpa-btn solid" to="/contact">{t.ctaStart} <ArrowUpRight size={16} /></Link>
-            <a className="rpa-arrow-link" href="#identify" onClick={(e) => scrollToSection(e, "identify")}>{t.ctaProcess} →</a>
+          <div>
+            <div className="rpa-kicker">{t.role.toUpperCase()}</div>
+            <h1 className="rpa-h">{t.tagline}</h1>
+            <p className="lede">{t.heroLede}</p>
+            <div className="rpa-cta-row">
+              <Link className="rpa-btn solid" to="/contact">{t.ctaStart} <ArrowUpRight size={16} /></Link>
+              <a className="rpa-arrow-link" href="#identify" onClick={(e) => scrollToSection(e, "identify")}>{t.ctaProcess} →</a>
+            </div>
           </div>
+          <HeroAnimation labels={STAGE_META.map((s) => t.stages[s.id].title.toUpperCase())} />
         </div>
       </section>
 
