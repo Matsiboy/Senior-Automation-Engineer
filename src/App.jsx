@@ -308,8 +308,8 @@ export const CONTENT = {
     },
     improveDemo: {
       label: "RE-MEASURE",
-      baseline: { label: "Baseline estimate", value: "20 h/week" },
-      measured: { label: "Measured at 90 days", value: "27 h/week" },
+      baseline: { label: "Baseline estimate", value: "160 h/week" },
+      measured: { label: "Measured at 90 days", value: "216 h/week" },
       delta: "+35% vs. estimate",
       measuring: "Re-measuring…",
       done: "Fed back into the next cycle",
@@ -528,8 +528,8 @@ export const CONTENT = {
     },
     improveDemo: {
       label: "MÅL PÅ NYTT",
-      baseline: { label: "Opprinnelig estimat", value: "20 t/uke" },
-      measured: { label: "Målt etter 90 dager", value: "27 t/uke" },
+      baseline: { label: "Opprinnelig estimat", value: "160 t/uke" },
+      measured: { label: "Målt etter 90 dager", value: "216 t/uke" },
       delta: "+35 % mot estimat",
       measuring: "Måler på nytt…",
       done: "Matet tilbake inn i neste syklus",
@@ -882,7 +882,7 @@ export function GlobalStyles() {
       .sv-chart{ display:flex; align-items:flex-end; gap:5px; height:96px; background:#fff; border:1px solid var(--rpa-line); border-radius:12px; padding:12px 14px; margin-bottom:12px; }
       .sv-cbar{ flex:1; border-radius:3px 3px 0 0; background:var(--rpa-primary); opacity:0; transform:scaleY(0.2); transform-origin:bottom; transition:all .35s ease; }
       .sv-cbar.on{ opacity:0.85; transform:scaleY(1); }
-      .sv-cbar.fail{ background:#DC2626; opacity:1; }
+      .sv-cbar.on.fail{ background:#DC2626; opacity:1; }
       .sv-alert{ display:flex; align-items:center; gap:8px; border-radius:10px; padding:9px 12px; font-size:0.76rem; border:1px solid var(--rpa-line); background:#fff; color:var(--rpa-ink-soft); transition:all .3s ease; }
       .sv-alert.alert{ background:#FEF2F2; border-color:#FCA5A5; color:#B91C1C; }
       .sv-alert.ok{ background:var(--rpa-primary-soft); border-color:var(--rpa-primary); color:var(--rpa-primary-dark); }
@@ -1150,6 +1150,7 @@ function useTicker(loopTicks, tickMs, finalTick) {
 }
 
 const pad2 = (n) => String(n).padStart(2, "0");
+const fmtNum = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 
 // Shared panel: header label, scene (children), and the status bar underneath.
 function VizShell({ label, status, count, chips, progress, children }) {
@@ -1452,7 +1453,7 @@ function MonitorAnimation({ t }) {
   const alertOn = tick >= 10;
   const resolved = tick >= 13;
   const alertState = resolved ? "ok" : alertOn ? "alert" : "";
-  const kpis = [String(shown * 24), failVisible ? "1" : "0", `${(shown * 1.7).toFixed(1)}h`];
+  const kpis = [fmtNum(shown * 1250), failVisible ? "1" : "0", `${fmtNum(shown * 120)}h`];
 
   return (
     <VizShell
@@ -1475,7 +1476,7 @@ function MonitorAnimation({ t }) {
       </div>
       <div className="sv-chart">
         {MONITOR_BARS.map((h, i) => {
-          const failing = i === MONITOR_FAIL && !resolved;
+          const failing = i === MONITOR_FAIL && i < shown && !resolved;
           const height = i === MONITOR_FAIL && resolved ? 66 : h;
           return <div key={i} className={`sv-cbar${i < shown ? " on" : ""}${failing ? " fail" : ""}`} style={{ height: `${height}%` }} />;
         })}
