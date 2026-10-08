@@ -40,6 +40,7 @@ import { Link, Routes, Route } from "react-router-dom";
 import {
   Search, ClipboardList, Compass, Code2, FlaskConical, Rocket, Activity,
   TrendingUp, Menu, X, ArrowUpRight, Mail, Github, Linkedin,
+  FileText, MessageSquare, BarChart3, Target, Check,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -92,16 +93,6 @@ export const STAGE_META = [
   { id: "monitor", icon: Activity },
   { id: "improve", icon: TrendingUp },
 ];
-
-// ---------------------------------------------------------------------------
-// STAGE_EMBEDS — optional animation/visual shown beside a stage's text. Map a
-// stage id to an embeddable URL (e.g. a MagicPath "?embed=true" link). Stages
-// not listed here render as plain text. `ratio` is the frame's CSS
-// aspect-ratio — adjust it to match your animation so nothing gets cropped.
-// ---------------------------------------------------------------------------
-export const STAGE_EMBEDS = {
-  identify: { url: "https://designs.magicpath.ai/v1/crisp-brook-1378?embed=true", ratio: "4 / 3" },
-};
 
 // ---------------------------------------------------------------------------
 // CONTENT — every string on the site, per language. This is the file's single
@@ -239,6 +230,21 @@ export const CONTENT = {
         sent: "Thanks — I'll be in touch.", error: "Something went wrong — email me directly instead.",
       },
     },
+    identifyDemo: {
+      label: "WORKFLOW DISCOVERY",
+      scanning: "Scanning workflow…",
+      complete: "Scan complete",
+      pending: "Review pending",
+      candidate: "Automate",
+      skip: "Keep manual",
+      chips: ["Low frequency", "Changing rules", "Varies"],
+      cards: [
+        { title: "Invoice entry", sub: "Finance workflow", freq: "Daily" },
+        { title: "Customer escalation", sub: "Support workflow", freq: "Daily" },
+        { title: "Report consolidation", sub: "Operations workflow", freq: "Daily" },
+        { title: "Annual strategy review", sub: "Leadership workflow", freq: "Yearly" },
+      ],
+    },
     footer: { backHome: "← Back home" },
   },
 
@@ -372,6 +378,21 @@ export const CONTENT = {
         submit: "Send melding", sending: "Sender…",
         sent: "Takk — jeg tar kontakt.", error: "Noe gikk galt — send meg heller en e-post direkte.",
       },
+    },
+    identifyDemo: {
+      label: "KARTLEGGING AV ARBEIDSFLYT",
+      scanning: "Skanner arbeidsflyt…",
+      complete: "Skanning ferdig",
+      pending: "Venter på vurdering",
+      candidate: "Automatiser",
+      skip: "Behold manuelt",
+      chips: ["Lav frekvens", "Skiftende regler", "Varierer"],
+      cards: [
+        { title: "Fakturaregistrering", sub: "Økonomiflyt", freq: "Daglig" },
+        { title: "Kundeeskalering", sub: "Supportflyt", freq: "Daglig" },
+        { title: "Rapportsamling", sub: "Driftsflyt", freq: "Daglig" },
+        { title: "Årlig strategigjennomgang", sub: "Ledelsesflyt", freq: "Årlig" },
+      ],
     },
     footer: { backHome: "← Tilbake til forsiden" },
   },
@@ -600,11 +621,46 @@ export function GlobalStyles() {
       .rpa-stage-band{ padding:72px 0; scroll-margin-top:90px; }
       .rpa-stage-band.alt{ background:var(--rpa-paper-dim); }
       .rpa-stage{ scroll-margin-top:90px; max-width:640px; }
-      .rpa-stage.has-embed{ max-width:none; display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; }
+      .rpa-stage.has-visual{ max-width:none; display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; }
       .rpa-stage-text{ max-width:640px; }
-      .rpa-stage-embed{ width:100%; border:1px solid var(--rpa-line); border-radius:16px; overflow:hidden; background:#fff; box-shadow:0 1px 3px rgba(15,23,42,0.05); }
-      .rpa-stage-embed iframe{ display:block; width:100%; height:100%; border:0; }
-      @media (max-width:860px){ .rpa-stage.has-embed{ grid-template-columns:1fr; gap:32px; } }
+      .rpa-stage-visual{ width:100%; }
+      @media (max-width:860px){ .rpa-stage.has-visual{ grid-template-columns:1fr; gap:32px; } }
+
+      /* Identify animation: a magnifier scans four workflow cards, each gets a verdict */
+      .idv{ background:var(--rpa-paper-dim); border:1px solid var(--rpa-line); border-radius:18px; padding:16px; }
+      .idv-head{ display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:0.64rem; letter-spacing:0.08em; color:var(--rpa-ink-soft); margin-bottom:12px; }
+      .idv-dot{ width:6px; height:6px; border-radius:50%; background:var(--rpa-primary); }
+      .idv-grid{ position:relative; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+      .idv-card{ position:relative; background:#fff; border:1px solid var(--rpa-line); border-radius:12px; padding:12px 14px; transition:border-color .3s ease, box-shadow .3s ease, background .3s ease; }
+      .idv-card.scanning{ border-color:var(--rpa-primary); box-shadow:0 0 0 3px var(--rpa-primary-soft); }
+      .idv-card.done.candidate{ border-color:rgba(37,99,235,0.45); }
+      .idv-card.done.skip{ border-color:rgba(220,38,38,0.4); background:#FFFAFA; }
+      .idv-card.done.skip .idv-title, .idv-card.done.skip .idv-sub{ color:var(--rpa-ink-soft); }
+      .idv-card.done.skip .idv-ico{ background:#FEE2E2; color:#DC2626; }
+      .idv-badge{ position:absolute; top:-8px; right:-8px; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; opacity:0; transform:scale(0.4); transition:opacity .25s ease, transform .35s cubic-bezier(.34,1.56,.64,1); }
+      .idv-card.done .idv-badge{ opacity:1; transform:scale(1); }
+      .idv-card.candidate .idv-badge{ background:var(--rpa-primary); color:#fff; }
+      .idv-card.skip .idv-badge{ background:#FEE2E2; color:#DC2626; border:1px solid #FCA5A5; }
+      .idv-card-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+      .idv-ico{ width:28px; height:28px; border-radius:8px; background:var(--rpa-primary-soft); color:var(--rpa-primary); display:flex; align-items:center; justify-content:center; }
+      .idv-num{ font-family:'JetBrains Mono',monospace; font-size:0.62rem; color:var(--rpa-ink-soft); }
+      .idv-title{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:0.9rem; line-height:1.25; color:var(--rpa-ink); }
+      .idv-sub{ font-size:0.72rem; color:var(--rpa-ink-soft); margin-top:2px; }
+      .idv-foot{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:12px; padding-top:8px; border-top:1px solid var(--rpa-line); font-family:'JetBrains Mono',monospace; font-size:0.6rem; color:var(--rpa-ink-soft); }
+      .idv-status{ display:inline-flex; align-items:center; gap:3px; text-align:right; }
+      .idv-card.done.candidate .idv-status{ color:var(--rpa-primary-dark); font-weight:500; }
+      .idv-card.done.skip .idv-status{ color:#DC2626; font-weight:500; }
+      .idv-lens{ position:absolute; width:72px; height:72px; transform:translate(-39%,-39%); pointer-events:none; filter:drop-shadow(0 6px 10px rgba(37,99,235,0.25)); transition:left .9s cubic-bezier(.4,0,.2,1), top .9s cubic-bezier(.4,0,.2,1), opacity .4s ease; }
+      .idv-lens svg{ animation:idvBob 2.4s ease-in-out infinite; }
+      @keyframes idvBob{ 0%,100%{ transform:translate(0,0); } 50%{ transform:translate(3px,-3px); } }
+      .idv-bar{ background:#fff; border:1px solid var(--rpa-line); border-radius:12px; padding:12px 14px; margin-top:12px; }
+      .idv-bar-row{ display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; color:var(--rpa-ink); margin-bottom:8px; }
+      .idv-count{ font-family:'JetBrains Mono',monospace; font-size:0.64rem; color:var(--rpa-ink-soft); }
+      .idv-chips{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+      .idv-chip{ font-family:'JetBrains Mono',monospace; font-size:0.6rem; padding:3px 8px; border-radius:999px; border:1px solid var(--rpa-line); color:var(--rpa-ink-soft); transition:all .3s ease; }
+      .idv-chip.hit{ background:#FEE2E2; border-color:#FCA5A5; color:#B91C1C; }
+      .idv-track{ height:4px; border-radius:2px; background:var(--rpa-line); overflow:hidden; }
+      .idv-fill{ height:100%; background:var(--rpa-primary); transition:width .7s linear; }
       .rpa-stage-icon{ width:46px; height:46px; border-radius:14px; background:var(--rpa-primary-soft); color:var(--rpa-primary); display:flex; align-items:center; justify-content:center; margin-bottom:18px; }
       .rpa-stage h2{ font-size:clamp(1.6rem,2.6vw,2.2rem); }
       .rpa-stage .rpa-summary{ color:var(--rpa-ink-soft); max-width:46ch; margin-bottom:20px; }
@@ -730,6 +786,103 @@ function HeroAnimation({ labels }) {
   );
 }
 
+// Identify-stage animation. A magnifier visits each workflow card in turn;
+// cards with a high-frequency, rule-based flow get marked "automate", the
+// rest "keep manual" (matching the Identify copy). Text lives in
+// CONTENT[lang].identifyDemo. Timing: one tick = TICK_MS, 4 ticks per card.
+const IDENTIFY_ICONS = [FileText, MessageSquare, BarChart3, Target];
+const IDENTIFY_VERDICTS = [
+  { verdict: "candidate", reason: null },
+  { verdict: "skip", reason: 2 }, // "Varies"
+  { verdict: "candidate", reason: null },
+  { verdict: "skip", reason: 0 }, // "Low frequency"
+];
+const IDV_TICK_MS = 700;
+const IDV_TICKS_PER_CARD = 4;
+const IDV_SCAN_TICKS = IDENTIFY_VERDICTS.length * IDV_TICKS_PER_CARD;
+const IDV_LOOP_TICKS = IDV_SCAN_TICKS + 5; // short hold on the finished state
+
+function IdentifyAnimation({ t }) {
+  const d = t.identifyDemo;
+  const reduced = typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const [tick, setTick] = useState(reduced ? IDV_SCAN_TICKS : 0);
+
+  useEffect(() => {
+    if (reduced) return;
+    const id = setInterval(() => setTick((n) => (n + 1) % IDV_LOOP_TICKS), IDV_TICK_MS);
+    return () => clearInterval(id);
+  }, [reduced]);
+
+  const scanning = tick < IDV_SCAN_TICKS;
+  const active = scanning ? Math.floor(tick / IDV_TICKS_PER_CARD) : -1;
+  const phase = scanning ? tick % IDV_TICKS_PER_CARD : 0;
+  const lensIndex = active < 0 ? IDENTIFY_VERDICTS.length - 1 : active;
+  const lens = { left: lensIndex % 2 === 0 ? 25 : 75, top: lensIndex < 2 ? 25 : 75 };
+  const progress = scanning ? ((tick + 1) / IDV_SCAN_TICKS) * 100 : 100;
+  const counter = String(scanning ? active + 1 : IDENTIFY_VERDICTS.length).padStart(2, "0");
+  const activeReason = scanning && phase >= 1 ? IDENTIFY_VERDICTS[active].reason : null;
+
+  function cardState(i) {
+    if (!scanning || i < active) return "done";
+    if (i === active) return phase >= 2 ? "done" : "scanning";
+    return "pending";
+  }
+
+  return (
+    <div className="idv" aria-hidden="true">
+      <div className="idv-head"><span className="idv-dot" />{d.label}</div>
+      <div className="idv-grid">
+        {d.cards.map((c, i) => {
+          const Icon = IDENTIFY_ICONS[i];
+          const st = cardState(i);
+          const verdict = IDENTIFY_VERDICTS[i].verdict;
+          return (
+            <div key={i} className={`idv-card ${st}${st === "done" ? " " + verdict : ""}`}>
+              <span className="idv-badge">{verdict === "candidate" ? <Check size={12} strokeWidth={3} /> : <X size={12} strokeWidth={3} />}</span>
+              <div className="idv-card-top">
+                <span className="idv-ico"><Icon size={15} /></span>
+                <span className="idv-num">{String(i + 1).padStart(2, "0")}</span>
+              </div>
+              <div className="idv-title">{c.title}</div>
+              <div className="idv-sub">{c.sub}</div>
+              <div className="idv-foot">
+                <span>{c.freq}</span>
+                <span className="idv-status">
+                  {st !== "done" ? d.pending : verdict === "candidate" ? <><Check size={10} />{d.candidate}</> : <><X size={10} />{d.skip}</>}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+        <div className="idv-lens" style={{ left: `${lens.left}%`, top: `${lens.top}%`, opacity: scanning ? 1 : 0 }}>
+          <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
+            <circle cx="28" cy="28" r="22" fill="rgba(37,99,235,0.10)" stroke={THEME.primary} strokeWidth="3.5" />
+            <circle cx="28" cy="28" r="17" stroke="rgba(37,99,235,0.35)" strokeWidth="1.2" />
+            <line x1="44" y1="44" x2="66" y2="66" stroke={THEME.primary} strokeWidth="6" strokeLinecap="round" />
+          </svg>
+        </div>
+      </div>
+      <div className="idv-bar">
+        <div className="idv-bar-row">
+          <span>{scanning ? d.scanning : d.complete}</span>
+          <span className="idv-count">{counter} / {String(IDENTIFY_VERDICTS.length).padStart(2, "0")}</span>
+        </div>
+        <div className="idv-chips">
+          {d.chips.map((chip, i) => (
+            <span key={i} className={`idv-chip${activeReason === i ? " hit" : ""}`}>{chip}</span>
+          ))}
+        </div>
+        <div className="idv-track"><div className="idv-fill" style={{ width: `${progress}%` }} /></div>
+      </div>
+    </div>
+  );
+}
+
+// Optional visual shown beside a stage's text. Map a stage id to a component
+// that takes `t` (the current language's content). Stages not listed here
+// render as plain text.
+const STAGE_VISUALS = { identify: IdentifyAnimation };
+
 function useScrollSpy(ids, offset = 130) {
   const [active, setActive] = useState(ids[0]);
   useEffect(() => {
@@ -841,12 +994,13 @@ function HomeSection() {
       <div className="rpa-journey">
         {STAGE_META.map((meta, i) => {
           const Icon = meta.icon;
+          const Visual = STAGE_VISUALS[meta.id];
           const stage = t.stages[meta.id];
           const alt = i % 2 === 1;
           return (
             <div className={`rpa-stage-band${alt ? " alt" : ""}`} key={meta.id} id={meta.id}>
               <div className="rpa-wrap">
-                <section className={`rpa-stage${STAGE_EMBEDS[meta.id] ? " has-embed" : ""}`}>
+                <section className={`rpa-stage${Visual ? " has-visual" : ""}`}>
                   <div className="rpa-stage-text">
                     <div className="rpa-stage-icon"><Icon size={22} /></div>
                     <div className="rpa-kicker">{stage.kicker}</div>
@@ -857,15 +1011,8 @@ function HomeSection() {
                       <Block key={bi} heading={b.heading} body={b.body} />
                     ))}
                   </div>
-                  {STAGE_EMBEDS[meta.id] && (
-                    <div className="rpa-stage-embed" style={{ aspectRatio: STAGE_EMBEDS[meta.id].ratio }}>
-                      <iframe
-                        src={STAGE_EMBEDS[meta.id].url}
-                        title={`${stage.title} animation`}
-                        loading="lazy"
-                        allow="fullscreen"
-                      />
-                    </div>
+                  {Visual && (
+                    <div className="rpa-stage-visual"><Visual t={t} /></div>
                   )}
                 </section>
               </div>
