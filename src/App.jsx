@@ -40,7 +40,7 @@ import { Link, Routes, Route } from "react-router-dom";
 import {
   Search, ClipboardList, Compass, Code2, FlaskConical, Rocket, Activity,
   TrendingUp, Menu, X, ArrowUpRight, Mail, Github, Linkedin,
-  FileText, MessageSquare, BarChart3, Target, Check,
+  FileText, MessageSquare, BarChart3, Target, Check, Plug, Terminal, Bot, Bell, RefreshCw,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -237,13 +237,84 @@ export const CONTENT = {
       pending: "Review pending",
       candidate: "Automate",
       skip: "Keep manual",
-      chips: ["Low frequency", "Changing rules", "Varies"],
+      summaryCandidate: "to automate",
+      summarySkip: "stay manual",
       cards: [
-        { title: "Invoice entry", sub: "Finance workflow", freq: "Daily" },
-        { title: "Customer escalation", sub: "Support workflow", freq: "Daily" },
-        { title: "Report consolidation", sub: "Operations workflow", freq: "Daily" },
-        { title: "Annual strategy review", sub: "Leadership workflow", freq: "Yearly" },
+        { title: "Invoice entry", sub: "Finance workflow", freq: "Daily", attrs: ["High frequency", "Rule-based", "Structured data"] },
+        { title: "Customer escalation", sub: "Support workflow", freq: "Daily", attrs: ["Varies", "Judgment calls", "Many exceptions"] },
+        { title: "Report consolidation", sub: "Operations workflow", freq: "Daily", attrs: ["High frequency", "Repeatable steps", "Stable rules"] },
+        { title: "Annual strategy review", sub: "Leadership workflow", freq: "Yearly", attrs: ["Low frequency", "Changing rules", "Open-ended"] },
       ],
+    },
+    assessDemo: {
+      label: "ASSESSMENT",
+      cols: ["Time saved", "Effort", "Risk"],
+      scoring: "Scoring candidates…",
+      ranked: "Ranked by return",
+      top: "Build first",
+      chips: ["Volume × time saved", "Build complexity", "System stability"],
+      rows: ["Expense approvals", "Invoice matching", "Report consolidation"],
+    },
+    designDemo: {
+      label: "PROCESS MAP",
+      mapping: "Mapping process…",
+      mapped: "Map complete — exceptions included",
+      lanes: ["AUTOMATION", "HUMAN"],
+      nodes: ["Receive", "Validate", "Match?", "Post", "Human review"],
+      yes: "yes",
+      no: "no",
+      chips: ["5 steps", "1 decision", "1 exception path"],
+    },
+    developDemo: {
+      label: "TOOL SELECTION",
+      situation: "Situation",
+      scenarios: ["The system has an API", "It's just moving data on a schedule", "Closed system, no API"],
+      tools: [
+        { name: "API integration", rank: "1st choice" },
+        { name: "Scheduled script", rank: "2nd choice" },
+        { name: "RPA bot", rank: "Last resort" },
+      ],
+      choosing: "Picking the simplest reliable tool…",
+      done: "Simplest reliable tool wins",
+      summary: "Simplest reliable tool first",
+      chips: ["APIs first", "Scripts for data", "RPA last"],
+    },
+    testDemo: {
+      label: "PARALLEL RUN",
+      cols: ["Record", "Manual", "Automation"],
+      running: "Comparing results…",
+      passed: "All results match",
+      chips: ["Bad data caught", "Timeout handled", "Missing field handled"],
+    },
+    deployDemo: {
+      label: "ROLLOUT",
+      stages: ["Shadow mode", "Subset of cases", "Full load"],
+      bar: "Cases handled by automation",
+      rolling: "Rolling out…",
+      done: "Live and handed over",
+      rollback: "Rollback plan ready",
+      handoff: "Handoff docs & walkthrough",
+      chips: ["Rollback plan", "Clear ownership", "Handoff"],
+    },
+    monitorDemo: {
+      label: "LIVE DASHBOARD",
+      kpis: ["Runs", "Exceptions", "Hours saved"],
+      healthy: "All runs healthy",
+      alert: "Failure detected — human alerted",
+      resolved: "Resolved — back to normal",
+      monitoring: "Monitoring runs…",
+      watching: "Monitoring continues",
+      chips: ["Run counts", "Exception rate", "Time saved"],
+    },
+    improveDemo: {
+      label: "RE-MEASURE",
+      baseline: { label: "Baseline estimate", value: "20 h/week" },
+      measured: { label: "Measured at 90 days", value: "27 h/week" },
+      delta: "+35% vs. estimate",
+      measuring: "Re-measuring…",
+      done: "Fed back into the next cycle",
+      next: { tag: "NEW CANDIDATE", title: "Expense approvals", sub: "Back to Identify" },
+      chips: ["Re-measure", "Compare to baseline", "Feed back"],
     },
     footer: { backHome: "← Back home" },
   },
@@ -386,13 +457,84 @@ export const CONTENT = {
       pending: "Venter på vurdering",
       candidate: "Automatiser",
       skip: "Behold manuelt",
-      chips: ["Lav frekvens", "Skiftende regler", "Varierer"],
+      summaryCandidate: "å automatisere",
+      summarySkip: "forblir manuelle",
       cards: [
-        { title: "Fakturaregistrering", sub: "Økonomiflyt", freq: "Daglig" },
-        { title: "Kundeeskalering", sub: "Supportflyt", freq: "Daglig" },
-        { title: "Rapportsamling", sub: "Driftsflyt", freq: "Daglig" },
-        { title: "Årlig strategigjennomgang", sub: "Ledelsesflyt", freq: "Årlig" },
+        { title: "Fakturaregistrering", sub: "Økonomiflyt", freq: "Daglig", attrs: ["Høy frekvens", "Regelbasert", "Strukturerte data"] },
+        { title: "Kundeeskalering", sub: "Supportflyt", freq: "Daglig", attrs: ["Varierer", "Skjønnsvurdering", "Mange unntak"] },
+        { title: "Rapportsamling", sub: "Driftsflyt", freq: "Daglig", attrs: ["Høy frekvens", "Gjentakbare steg", "Stabile regler"] },
+        { title: "Årlig strategigjennomgang", sub: "Ledelsesflyt", freq: "Årlig", attrs: ["Lav frekvens", "Skiftende regler", "Åpen oppgave"] },
       ],
+    },
+    assessDemo: {
+      label: "VURDERING",
+      cols: ["Spart tid", "Innsats", "Risiko"],
+      scoring: "Vurderer kandidater…",
+      ranked: "Rangert etter avkastning",
+      top: "Bygg først",
+      chips: ["Volum × spart tid", "Byggekompleksitet", "Systemstabilitet"],
+      rows: ["Utgiftsgodkjenning", "Fakturamatching", "Rapportsamling"],
+    },
+    designDemo: {
+      label: "PROSESSKART",
+      mapping: "Kartlegger prosess…",
+      mapped: "Kart ferdig — inkludert unntak",
+      lanes: ["AUTOMATISERING", "MENNESKE"],
+      nodes: ["Motta", "Valider", "Treff?", "Bokfør", "Manuell vurdering"],
+      yes: "ja",
+      no: "nei",
+      chips: ["5 steg", "1 beslutning", "1 unntaksvei"],
+    },
+    developDemo: {
+      label: "VALG AV VERKTØY",
+      situation: "Situasjon",
+      scenarios: ["Systemet har et API", "Det handler bare om å flytte data etter en plan", "Lukket system uten API"],
+      tools: [
+        { name: "API-integrasjon", rank: "1. valg" },
+        { name: "Planlagt skript", rank: "2. valg" },
+        { name: "RPA-robot", rank: "Siste utvei" },
+      ],
+      choosing: "Velger det enkleste pålitelige verktøyet…",
+      done: "Enkleste pålitelige verktøy vinner",
+      summary: "Enkleste pålitelige verktøy først",
+      chips: ["API-er først", "Skript for data", "RPA sist"],
+    },
+    testDemo: {
+      label: "PARALLELL KJØRING",
+      cols: ["Post", "Manuelt", "Automatisk"],
+      running: "Sammenligner resultater…",
+      passed: "Alle resultater stemmer",
+      chips: ["Dårlige data fanget", "Tidsavbrudd håndtert", "Manglende felt håndtert"],
+    },
+    deployDemo: {
+      label: "UTRULLING",
+      stages: ["Skyggemodus", "Utvalg av saker", "Full last"],
+      bar: "Saker håndtert av automatisering",
+      rolling: "Ruller ut…",
+      done: "Live og overlevert",
+      rollback: "Tilbakerullingsplan klar",
+      handoff: "Dokumentasjon og gjennomgang",
+      chips: ["Tilbakerullingsplan", "Tydelig eierskap", "Overlevering"],
+    },
+    monitorDemo: {
+      label: "LIVE DASHBORD",
+      kpis: ["Kjøringer", "Unntak", "Timer spart"],
+      healthy: "Alle kjøringer friske",
+      alert: "Feil oppdaget — menneske varslet",
+      resolved: "Løst — tilbake til normalt",
+      monitoring: "Overvåker kjøringer…",
+      watching: "Overvåkingen fortsetter",
+      chips: ["Antall kjøringer", "Feilrate", "Spart tid"],
+    },
+    improveDemo: {
+      label: "MÅL PÅ NYTT",
+      baseline: { label: "Opprinnelig estimat", value: "20 t/uke" },
+      measured: { label: "Målt etter 90 dager", value: "27 t/uke" },
+      delta: "+35 % mot estimat",
+      measuring: "Måler på nytt…",
+      done: "Matet tilbake inn i neste syklus",
+      next: { tag: "NY KANDIDAT", title: "Utgiftsgodkjenning", sub: "Tilbake til Identifiser" },
+      chips: ["Mål på nytt", "Sammenlign med basislinje", "Mat tilbake"],
     },
     footer: { backHome: "← Tilbake til forsiden" },
   },
@@ -657,10 +799,111 @@ export function GlobalStyles() {
       .idv-bar-row{ display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; color:var(--rpa-ink); margin-bottom:8px; }
       .idv-count{ font-family:'JetBrains Mono',monospace; font-size:0.64rem; color:var(--rpa-ink-soft); }
       .idv-chips{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
-      .idv-chip{ font-family:'JetBrains Mono',monospace; font-size:0.6rem; padding:3px 8px; border-radius:999px; border:1px solid var(--rpa-line); color:var(--rpa-ink-soft); transition:all .3s ease; }
-      .idv-chip.hit{ background:#FEE2E2; border-color:#FCA5A5; color:#B91C1C; }
+      .idv-chip{ font-family:'JetBrains Mono',monospace; font-size:0.6rem; padding:3px 8px; border-radius:999px; border:1px solid var(--rpa-line); color:var(--rpa-ink-soft); opacity:0.5; transition:all .3s ease; }
+      .idv-chip.lit{ opacity:1; }
+      .idv-chip.lit.candidate{ background:var(--rpa-primary-soft); border-color:var(--rpa-primary); color:var(--rpa-primary-dark); }
+      .idv-chip.lit.skip{ background:#FEE2E2; border-color:#FCA5A5; color:#B91C1C; }
       .idv-track{ height:4px; border-radius:2px; background:var(--rpa-line); overflow:hidden; }
       .idv-fill{ height:100%; background:var(--rpa-primary); transition:width .7s linear; }
+
+      /* Stage animations 02-08 (shared panel styles are the .idv-* ones above) */
+      .rpa-stage-band.alt .idv{ background:#F1F5F9; }
+      .rpa-stage-band.alt .rpa-stage.has-visual .rpa-stage-visual{ order:-1; }
+      @media (max-width:860px){ .rpa-stage-band.alt .rpa-stage.has-visual .rpa-stage-visual{ order:0; } }
+      .sv-box{ background:#fff; border:1px solid var(--rpa-line); border-radius:12px; padding:12px 14px; }
+
+      .sv-assess{ position:relative; }
+      .sv-arow{ position:absolute; left:0; right:0; height:72px; background:#fff; border:1px solid var(--rpa-line); border-radius:12px; padding:10px 12px; transition:top .7s cubic-bezier(.4,0,.2,1), border-color .3s ease, box-shadow .3s ease; }
+      .sv-arow.best{ border-color:var(--rpa-primary); box-shadow:0 0 0 3px var(--rpa-primary-soft); }
+      .sv-arow-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+      .sv-arow-name{ display:flex; align-items:center; gap:6px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:0.86rem; color:var(--rpa-ink); }
+      .sv-arow-name b{ font-family:'JetBrains Mono',monospace; font-size:0.62rem; font-weight:500; color:var(--rpa-primary-dark); }
+      .sv-arow-score{ display:flex; align-items:center; gap:6px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:0.95rem; color:var(--rpa-ink); }
+      .sv-tag{ font-family:'JetBrains Mono',monospace; font-size:0.56rem; font-weight:500; padding:2px 6px; border-radius:999px; background:var(--rpa-primary); color:#fff; }
+      .sv-metrics{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+      .sv-metric span{ display:block; font-family:'JetBrains Mono',monospace; font-size:0.56rem; color:var(--rpa-ink-soft); margin-bottom:3px; }
+      .sv-mtrack{ height:4px; border-radius:2px; background:var(--rpa-line); overflow:hidden; }
+      .sv-mfill{ height:100%; width:0; transition:width .7s ease; }
+      .sv-mfill.m0{ background:var(--rpa-primary); }
+      .sv-mfill.m1{ background:#94A3B8; }
+      .sv-mfill.m2{ background:#FCA5A5; }
+
+      .sv-flow{ padding:8px; }
+      .sv-flow svg{ width:100%; height:auto; display:block; }
+      .sv-flow text{ font-family:'JetBrains Mono',monospace; font-size:9.5px; fill:var(--rpa-ink); }
+      .sv-flow text.sv-lane{ font-size:7.5px; fill:var(--rpa-ink-soft); letter-spacing:0.08em; }
+
+      .sv-situation{ background:#fff; border:1px solid var(--rpa-line); border-radius:12px; padding:12px 14px; margin-bottom:12px; min-height:64px; }
+      .sv-situation small{ display:block; font-family:'JetBrains Mono',monospace; font-size:0.58rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--rpa-ink-soft); margin-bottom:4px; }
+      .sv-situation div{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:0.95rem; color:var(--rpa-ink); }
+      .sv-tools{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+      .sv-tool{ position:relative; background:#fff; border:1px solid var(--rpa-line); border-radius:12px; padding:12px 8px; text-align:center; transition:all .3s ease; }
+      .sv-tool-ico{ width:30px; height:30px; border-radius:9px; background:var(--rpa-primary-soft); color:var(--rpa-primary); display:flex; align-items:center; justify-content:center; margin:0 auto 8px; }
+      .sv-tool-name{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:0.78rem; line-height:1.2; color:var(--rpa-ink); }
+      .sv-tool-rank{ font-family:'JetBrains Mono',monospace; font-size:0.56rem; color:var(--rpa-ink-soft); margin-top:4px; }
+      .sv-tool.on{ border-color:var(--rpa-primary); box-shadow:0 0 0 3px var(--rpa-primary-soft); }
+      .sv-tool.on .idv-badge{ opacity:1; transform:scale(1); background:var(--rpa-primary); color:#fff; }
+      .sv-tool.off{ opacity:0.45; }
+
+      .sv-table{ background:#fff; border:1px solid var(--rpa-line); border-radius:12px; overflow:hidden; }
+      .sv-thead, .sv-trow{ display:grid; grid-template-columns:1.1fr 1fr 1fr 22px; gap:8px; align-items:center; padding:8px 12px; }
+      .sv-thead{ font-family:'JetBrains Mono',monospace; font-size:0.56rem; letter-spacing:0.06em; text-transform:uppercase; color:var(--rpa-ink-soft); border-bottom:1px solid var(--rpa-line); }
+      .sv-trow{ font-family:'JetBrains Mono',monospace; font-size:0.7rem; color:var(--rpa-ink); border-bottom:1px solid var(--rpa-line); transition:background .3s ease; }
+      .sv-trow:last-child{ border-bottom:none; }
+      .sv-trow.active{ background:var(--rpa-primary-soft); }
+      .sv-trow.fail{ background:#FEF2F2; }
+      .sv-trow .bad{ color:#DC2626; font-weight:500; }
+      .sv-tstat{ width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; flex:none; transition:background .3s ease; }
+      .sv-tstat.pass{ background:var(--rpa-primary); }
+      .sv-tstat.fail{ background:#DC2626; }
+      .sv-tstat.pending{ background:var(--rpa-line); }
+
+      .sv-stages{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; }
+      .sv-stage{ background:#fff; border:1px solid var(--rpa-line); border-radius:12px; padding:10px 12px; opacity:0.55; transition:all .3s ease; }
+      .sv-stage.past{ opacity:1; }
+      .sv-stage.current{ opacity:1; border-color:var(--rpa-primary); box-shadow:0 0 0 3px var(--rpa-primary-soft); }
+      .sv-stage small{ display:block; font-family:'JetBrains Mono',monospace; font-size:0.56rem; color:var(--rpa-ink-soft); margin-bottom:3px; }
+      .sv-stage div{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:0.8rem; line-height:1.2; color:var(--rpa-ink); }
+      .sv-load{ background:#fff; border:1px solid var(--rpa-line); border-radius:12px; padding:12px 14px; margin-bottom:12px; }
+      .sv-load-row{ display:flex; justify-content:space-between; align-items:baseline; font-size:0.74rem; color:var(--rpa-ink-soft); margin-bottom:8px; }
+      .sv-load-pct{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1.2rem; color:var(--rpa-ink); }
+      .sv-load-track{ height:10px; border-radius:5px; background:var(--rpa-line); overflow:hidden; }
+      .sv-load-fill{ height:100%; background:var(--rpa-primary); transition:width .9s cubic-bezier(.4,0,.2,1); }
+      .sv-checks{ display:grid; gap:8px; }
+      .sv-check{ display:flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--rpa-line); border-radius:10px; padding:8px 12px; font-size:0.76rem; color:var(--rpa-ink-soft); transition:all .3s ease; }
+      .sv-check .sv-tstat{ width:16px; height:16px; }
+      .sv-check.on{ color:var(--rpa-ink); border-color:rgba(37,99,235,0.35); }
+
+      .sv-kpis{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; }
+      .sv-kpi{ background:#fff; border:1px solid var(--rpa-line); border-radius:12px; padding:10px 12px; }
+      .sv-kpi small{ display:block; font-family:'JetBrains Mono',monospace; font-size:0.56rem; letter-spacing:0.06em; text-transform:uppercase; color:var(--rpa-ink-soft); }
+      .sv-kpi div{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1.15rem; margin-top:2px; color:var(--rpa-ink); }
+      .sv-kpi.warn div{ color:#DC2626; }
+      .sv-chart{ display:flex; align-items:flex-end; gap:5px; height:96px; background:#fff; border:1px solid var(--rpa-line); border-radius:12px; padding:12px 14px; margin-bottom:12px; }
+      .sv-cbar{ flex:1; border-radius:3px 3px 0 0; background:var(--rpa-primary); opacity:0; transform:scaleY(0.2); transform-origin:bottom; transition:all .35s ease; }
+      .sv-cbar.on{ opacity:0.85; transform:scaleY(1); }
+      .sv-cbar.fail{ background:#DC2626; opacity:1; }
+      .sv-alert{ display:flex; align-items:center; gap:8px; border-radius:10px; padding:9px 12px; font-size:0.76rem; border:1px solid var(--rpa-line); background:#fff; color:var(--rpa-ink-soft); transition:all .3s ease; }
+      .sv-alert.alert{ background:#FEF2F2; border-color:#FCA5A5; color:#B91C1C; }
+      .sv-alert.ok{ background:var(--rpa-primary-soft); border-color:var(--rpa-primary); color:var(--rpa-primary-dark); }
+
+      .sv-cmp{ background:#fff; border:1px solid var(--rpa-line); border-radius:12px; padding:14px; margin-bottom:12px; display:grid; gap:14px; }
+      .sv-cmp-row small{ display:flex; justify-content:space-between; font-size:0.72rem; color:var(--rpa-ink-soft); margin-bottom:6px; }
+      .sv-cmp-row small b{ font-family:'Space Grotesk',sans-serif; color:var(--rpa-ink); }
+      .sv-cmp-track{ height:10px; border-radius:5px; background:var(--rpa-line); overflow:hidden; }
+      .sv-cmp-fill{ height:100%; width:0; border-radius:5px; transition:width .9s cubic-bezier(.4,0,.2,1); }
+      .sv-cmp-fill.base{ background:#94A3B8; }
+      .sv-cmp-fill.meas{ background:var(--rpa-primary); }
+      .sv-delta{ justify-self:start; font-family:'JetBrains Mono',monospace; font-size:0.64rem; padding:3px 9px; border-radius:999px; background:var(--rpa-primary-soft); border:1px solid var(--rpa-primary); color:var(--rpa-primary-dark); opacity:0; transform:translateY(4px); transition:all .4s ease; }
+      .sv-delta.on{ opacity:1; transform:none; }
+      .sv-next{ display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--rpa-primary); border-radius:12px; padding:10px 12px; opacity:0; transform:translateY(8px); transition:all .45s ease; }
+      .sv-next.on{ opacity:1; transform:none; box-shadow:0 0 0 3px var(--rpa-primary-soft); }
+      .sv-next-ico{ width:30px; height:30px; border-radius:9px; background:var(--rpa-primary-soft); color:var(--rpa-primary); display:flex; align-items:center; justify-content:center; flex:none; }
+      .sv-next.on .sv-spin{ animation:svSpin 2.4s linear infinite; }
+      @keyframes svSpin{ to{ transform:rotate(360deg); } }
+      .sv-next small{ display:block; font-family:'JetBrains Mono',monospace; font-size:0.56rem; letter-spacing:0.06em; color:var(--rpa-primary-dark); }
+      .sv-next strong{ display:block; font-family:'Space Grotesk',sans-serif; font-size:0.86rem; color:var(--rpa-ink); }
+      .sv-next-sub{ font-size:0.7rem; color:var(--rpa-ink-soft); }
       .rpa-stage-icon{ width:46px; height:46px; border-radius:14px; background:var(--rpa-primary-soft); color:var(--rpa-primary); display:flex; align-items:center; justify-content:center; margin-bottom:18px; }
       .rpa-stage h2{ font-size:clamp(1.6rem,2.6vw,2.2rem); }
       .rpa-stage .rpa-summary{ color:var(--rpa-ink-soft); max-width:46ch; margin-bottom:20px; }
@@ -786,19 +1029,15 @@ function HeroAnimation({ labels }) {
   );
 }
 
-// Identify-stage animation. A magnifier visits each workflow card in turn;
-// cards with a high-frequency, rule-based flow get marked "automate", the
-// rest "keep manual" (matching the Identify copy). Text lives in
-// CONTENT[lang].identifyDemo. Timing: one tick = TICK_MS, 4 ticks per card.
+// Identify-stage animation. A magnifier visits each workflow card in turn and
+// reads out that card's own attributes (good processes show positive traits,
+// bad ones show disqualifiers), then marks it "automate" or "keep manual".
+// Text lives in CONTENT[lang].identifyDemo. Timing: one tick = IDV_TICK_MS;
+// each card takes IDV_TICKS_PER_CARD ticks: arrive, 3 attributes, verdict.
 const IDENTIFY_ICONS = [FileText, MessageSquare, BarChart3, Target];
-const IDENTIFY_VERDICTS = [
-  { verdict: "candidate", reason: null },
-  { verdict: "skip", reason: 2 }, // "Varies"
-  { verdict: "candidate", reason: null },
-  { verdict: "skip", reason: 0 }, // "Low frequency"
-];
-const IDV_TICK_MS = 700;
-const IDV_TICKS_PER_CARD = 4;
+const IDENTIFY_VERDICTS = ["candidate", "skip", "candidate", "skip"];
+const IDV_TICK_MS = 600;
+const IDV_TICKS_PER_CARD = 5;
 const IDV_SCAN_TICKS = IDENTIFY_VERDICTS.length * IDV_TICKS_PER_CARD;
 const IDV_LOOP_TICKS = IDV_SCAN_TICKS + 5; // short hold on the finished state
 
@@ -813,20 +1052,30 @@ function IdentifyAnimation({ t }) {
     return () => clearInterval(id);
   }, [reduced]);
 
+  const total = IDENTIFY_VERDICTS.length;
+  const goodCount = IDENTIFY_VERDICTS.filter((v) => v === "candidate").length;
   const scanning = tick < IDV_SCAN_TICKS;
   const active = scanning ? Math.floor(tick / IDV_TICKS_PER_CARD) : -1;
   const phase = scanning ? tick % IDV_TICKS_PER_CARD : 0;
-  const lensIndex = active < 0 ? IDENTIFY_VERDICTS.length - 1 : active;
+  const lensIndex = active < 0 ? total - 1 : active;
   const lens = { left: lensIndex % 2 === 0 ? 25 : 75, top: lensIndex < 2 ? 25 : 75 };
   const progress = scanning ? ((tick + 1) / IDV_SCAN_TICKS) * 100 : 100;
-  const counter = String(scanning ? active + 1 : IDENTIFY_VERDICTS.length).padStart(2, "0");
-  const activeReason = scanning && phase >= 1 ? IDENTIFY_VERDICTS[active].reason : null;
+  const counter = String(scanning ? active + 1 : total).padStart(2, "0");
 
   function cardState(i) {
     if (!scanning || i < active) return "done";
-    if (i === active) return phase >= 2 ? "done" : "scanning";
+    if (i === active) return phase >= IDV_TICKS_PER_CARD - 1 ? "done" : "scanning";
     return "pending";
   }
+
+  // While scanning: the active card's own attributes, revealed one per tick
+  // and toned by its verdict. When finished: a summary of the whole scan.
+  const chips = scanning
+    ? d.cards[active].attrs.map((text, i) => ({ text, lit: phase >= i + 1, tone: IDENTIFY_VERDICTS[active] }))
+    : [
+        { text: `${goodCount} ${d.summaryCandidate}`, lit: true, tone: "candidate" },
+        { text: `${total - goodCount} ${d.summarySkip}`, lit: true, tone: "skip" },
+      ];
 
   return (
     <div className="idv" aria-hidden="true">
@@ -835,7 +1084,7 @@ function IdentifyAnimation({ t }) {
         {d.cards.map((c, i) => {
           const Icon = IDENTIFY_ICONS[i];
           const st = cardState(i);
-          const verdict = IDENTIFY_VERDICTS[i].verdict;
+          const verdict = IDENTIFY_VERDICTS[i];
           return (
             <div key={i} className={`idv-card ${st}${st === "done" ? " " + verdict : ""}`}>
               <span className="idv-badge">{verdict === "candidate" ? <Check size={12} strokeWidth={3} /> : <X size={12} strokeWidth={3} />}</span>
@@ -865,11 +1114,11 @@ function IdentifyAnimation({ t }) {
       <div className="idv-bar">
         <div className="idv-bar-row">
           <span>{scanning ? d.scanning : d.complete}</span>
-          <span className="idv-count">{counter} / {String(IDENTIFY_VERDICTS.length).padStart(2, "0")}</span>
+          <span className="idv-count">{counter} / {String(total).padStart(2, "0")}</span>
         </div>
         <div className="idv-chips">
-          {d.chips.map((chip, i) => (
-            <span key={i} className={`idv-chip${activeReason === i ? " hit" : ""}`}>{chip}</span>
+          {chips.map((chip, i) => (
+            <span key={`${scanning ? active : "done"}-${i}`} className={`idv-chip${chip.lit ? " lit " + chip.tone : ""}`}>{chip.text}</span>
           ))}
         </div>
         <div className="idv-track"><div className="idv-fill" style={{ width: `${progress}%` }} /></div>
@@ -878,10 +1127,420 @@ function IdentifyAnimation({ t }) {
   );
 }
 
+// =====================================================================================
+// Stage animations (Assess → Improve). Same idea as IdentifyAnimation above: a
+// small looping scene per stage, driven by one shared ticker, with all text in
+// CONTENT[lang].<stage>Demo so it follows the language switch.
+// =====================================================================================
+function prefersReducedMotion() {
+  return typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+// Counts 0 … loopTicks-1, one step every tickMs. With "reduce motion" on it
+// stays on finalTick (the completed state) and never animates.
+function useTicker(loopTicks, tickMs, finalTick) {
+  const reduced = prefersReducedMotion();
+  const [tick, setTick] = useState(reduced ? finalTick : 0);
+  useEffect(() => {
+    if (reduced) return;
+    const id = setInterval(() => setTick((n) => (n + 1) % loopTicks), tickMs);
+    return () => clearInterval(id);
+  }, [reduced, loopTicks, tickMs]);
+  return tick;
+}
+
+const pad2 = (n) => String(n).padStart(2, "0");
+
+// Shared panel: header label, scene (children), and the status bar underneath.
+function VizShell({ label, status, count, chips, progress, children }) {
+  return (
+    <div className="idv" aria-hidden="true">
+      <div className="idv-head"><span className="idv-dot" />{label}</div>
+      {children}
+      <div className="idv-bar">
+        <div className="idv-bar-row">
+          <span>{status}</span>
+          {count ? <span className="idv-count">{count}</span> : null}
+        </div>
+        <div className="idv-chips">
+          {chips.map((c, i) => (
+            <span key={i} className={`idv-chip${c.lit ? " lit " + (c.tone || "candidate") : ""}`}>{c.text}</span>
+          ))}
+        </div>
+        <div className="idv-track"><div className="idv-fill" style={{ width: `${progress}%` }} /></div>
+      </div>
+    </div>
+  );
+}
+
+// ---- 02 Assess: candidates get scored, then re-rank by return ------------------------
+const ASSESS_ROWS = [
+  { m: [30, 55, 45], score: 42 },
+  { m: [90, 30, 20], score: 91 },
+  { m: [62, 40, 35], score: 68 },
+];
+const ASSESS_ROW_H = 80;
+
+function AssessAnimation({ t }) {
+  const d = t.assessDemo;
+  const FINAL = 12;
+  const tick = useTicker(17, 600, FINAL);
+  const revealed = (i) => tick >= 1 + i * 2;
+  const sorted = tick >= 8;
+  const order = ASSESS_ROWS.map((_, i) => i).sort((a, b) => ASSESS_ROWS[b].score - ASSESS_ROWS[a].score);
+  const revealedCount = ASSESS_ROWS.filter((_, i) => revealed(i)).length;
+  const chipLit = [tick >= 2, tick >= 4, tick >= 6];
+
+  return (
+    <VizShell
+      label={d.label}
+      status={sorted ? d.ranked : d.scoring}
+      count={`${pad2(revealedCount)} / ${pad2(ASSESS_ROWS.length)}`}
+      progress={Math.min(100, (tick / FINAL) * 100)}
+      chips={d.chips.map((text, i) => ({ text, lit: chipLit[i] }))}
+    >
+      <div className="sv-assess" style={{ height: ASSESS_ROW_H * ASSESS_ROWS.length - 8 }}>
+        {ASSESS_ROWS.map((r, i) => {
+          const rank = order.indexOf(i);
+          const on = revealed(i);
+          return (
+            <div key={i} className={`sv-arow${sorted && rank === 0 ? " best" : ""}`} style={{ top: (sorted ? rank : i) * ASSESS_ROW_H }}>
+              <div className="sv-arow-top">
+                <span className="sv-arow-name">{sorted && <b>#{rank + 1}</b>}{d.rows[i]}</span>
+                <span className="sv-arow-score">
+                  {sorted && rank === 0 && <span className="sv-tag">{d.top}</span>}
+                  {on ? r.score : "—"}
+                </span>
+              </div>
+              <div className="sv-metrics">
+                {d.cols.map((c, k) => (
+                  <div key={k} className="sv-metric">
+                    <span>{c}</span>
+                    <div className="sv-mtrack"><div className={`sv-mfill m${k}`} style={{ width: on ? `${r.m[k]}%` : "0%" }} /></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </VizShell>
+  );
+}
+
+// ---- 03 Design: a process map draws itself, exception path included -------------------
+function SvEdge({ d, show, red, dashed }) {
+  return (
+    <g style={{ opacity: show ? 1 : 0, transition: "opacity .4s ease" }}>
+      <path d={d} fill="none" stroke={red ? "#DC2626" : THEME.primary} strokeWidth="1.6" strokeLinecap="round"
+        strokeDasharray={dashed ? "4 3" : undefined} markerEnd={red ? "url(#svArrowR)" : "url(#svArrowB)"} />
+    </g>
+  );
+}
+
+function SvNode({ x, y, w, h, label, show, red }) {
+  return (
+    <g style={{ opacity: show ? 1 : 0, transition: "opacity .4s ease" }}>
+      <rect x={x} y={y} width={w} height={h} rx="8" fill={red ? "#FEF2F2" : "#fff"} stroke={red ? "#FCA5A5" : THEME.primary} strokeWidth="1.4" />
+      <text x={x + w / 2} y={y + h / 2 + 3.5} textAnchor="middle">{label}</text>
+    </g>
+  );
+}
+
+function DesignAnimation({ t }) {
+  const d = t.designDemo;
+  const FINAL = 7;
+  const tick = useTicker(13, 650, FINAL);
+  const on = (n) => tick >= n;
+  const fade = (show) => ({ opacity: show ? 1 : 0, transition: "opacity .4s ease" });
+  const [nReceive, nValidate, nMatch, nPost, nReview] = d.nodes;
+
+  return (
+    <VizShell
+      label={d.label}
+      status={on(FINAL) ? d.mapped : d.mapping}
+      progress={Math.min(100, (tick / FINAL) * 100)}
+      chips={[
+        { text: d.chips[0], lit: on(6) },
+        { text: d.chips[1], lit: on(3) },
+        { text: d.chips[2], lit: on(6), tone: "skip" },
+      ]}
+    >
+      <div className="sv-box sv-flow">
+        <svg viewBox="0 0 360 176">
+          <defs>
+            <marker id="svArrowB" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L8,4 L0,8 z" fill={THEME.primary} />
+            </marker>
+            <marker id="svArrowR" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L8,4 L0,8 z" fill="#DC2626" />
+            </marker>
+          </defs>
+          <rect x="2" y="2" width="356" height="82" rx="10" fill={THEME.paperDim} stroke={THEME.line} />
+          <rect x="2" y="94" width="356" height="80" rx="10" fill="#FFFAFA" stroke="rgba(220,38,38,0.2)" />
+          <text className="sv-lane" x="10" y="13">{d.lanes[0]}</text>
+          <text className="sv-lane" x="10" y="105">{d.lanes[1]}</text>
+
+          <SvNode x={10} y={28} w={72} h={34} label={nReceive} show={on(1)} />
+          <SvEdge d="M82,45 L109,45" show={on(2)} />
+          <SvNode x={110} y={28} w={72} h={34} label={nValidate} show={on(2)} />
+          <SvEdge d="M182,45 L206,45" show={on(3)} />
+          <g style={fade(on(3))}>
+            <polygon points="240,21 272,45 240,69 208,45" fill="#fff" stroke={THEME.primary} strokeWidth="1.4" />
+            <text x="240" y="48.5" textAnchor="middle">{nMatch}</text>
+          </g>
+          <SvEdge d="M272,45 L293,45" show={on(4)} />
+          <text x="282" y="39" textAnchor="middle" style={{ ...fade(on(4)), fontSize: "8px" }}>{d.yes}</text>
+          <SvNode x={294} y={28} w={60} h={34} label={nPost} show={on(4)} />
+          <SvEdge d="M240,69 L240,110" show={on(5)} red dashed />
+          <text x="248" y="92" style={{ ...fade(on(5)), fontSize: "8px", fill: "#DC2626" }}>{d.no}</text>
+          <SvNode x={186} y={112} w={108} h={34} label={nReview} show={on(6)} red />
+        </svg>
+      </div>
+    </VizShell>
+  );
+}
+
+// ---- 04 Develop: three situations, each picks the simplest tool that works -------------
+const DEVELOP_ICONS = [Plug, Terminal, Bot];
+
+function DevelopAnimation({ t }) {
+  const d = t.developDemo;
+  const PER = 4;
+  const FINAL = d.tools.length * PER;
+  const tick = useTicker(FINAL + 4, 650, FINAL);
+  const done = tick >= FINAL;
+  const active = done ? -1 : Math.floor(tick / PER);
+  const phase = tick % PER;
+  const toolState = (i) => (done ? "on" : phase >= 1 ? (active === i ? "on" : "off") : "");
+  const chipLit = (i) => done || active > i || (active === i && phase >= 1);
+
+  return (
+    <VizShell
+      label={d.label}
+      status={done ? d.done : d.choosing}
+      progress={Math.min(100, (tick / FINAL) * 100)}
+      chips={d.chips.map((text, i) => ({ text, lit: chipLit(i) }))}
+    >
+      <div className="sv-situation">
+        <small>{d.situation}</small>
+        <div>{done ? d.summary : d.scenarios[active]}</div>
+      </div>
+      <div className="sv-tools">
+        {d.tools.map((tool, i) => {
+          const Icon = DEVELOP_ICONS[i];
+          return (
+            <div key={i} className={`sv-tool ${toolState(i)}`}>
+              <span className="idv-badge"><Check size={12} strokeWidth={3} /></span>
+              <span className="sv-tool-ico"><Icon size={16} /></span>
+              <div className="sv-tool-name">{tool.name}</div>
+              <div className="sv-tool-rank">{tool.rank}</div>
+            </div>
+          );
+        })}
+      </div>
+    </VizShell>
+  );
+}
+
+// ---- 05 Test: parallel run, one mismatch is caught and fixed, failures injected --------
+const TEST_ROWS = [
+  { id: "INV-1041", manual: "1,240.00", auto: "1,240.00" },
+  { id: "INV-1042", manual: "310.50", auto: "310.50" },
+  { id: "INV-1043", manual: "89.00", auto: "89.00" },
+  { id: "INV-1044", manual: "2,075.00", auto: "2,057.00", fixedAt: 8 },
+  { id: "INV-1045", manual: "640.25", auto: "640.25" },
+];
+
+function TestAnimation({ t }) {
+  const d = t.testDemo;
+  const FINAL = 11;
+  const tick = useTicker(16, 600, FINAL);
+  const status = (r, i) => (tick < 1 + i ? "pending" : r.fixedAt && tick < r.fixedAt ? "fail" : "pass");
+  const passCount = TEST_ROWS.filter((r, i) => status(r, i) === "pass").length;
+  const allPass = passCount === TEST_ROWS.length;
+
+  return (
+    <VizShell
+      label={d.label}
+      status={allPass ? d.passed : d.running}
+      count={`${pad2(passCount)} / ${pad2(TEST_ROWS.length)}`}
+      progress={Math.min(100, (tick / FINAL) * 100)}
+      chips={d.chips.map((text, i) => ({ text, lit: tick >= 9 + i }))}
+    >
+      <div className="sv-table">
+        <div className="sv-thead"><span>{d.cols[0]}</span><span>{d.cols[1]}</span><span>{d.cols[2]}</span><span /></div>
+        {TEST_ROWS.map((r, i) => {
+          const st = status(r, i);
+          const checking = tick === 1 + i || (r.fixedAt && tick === r.fixedAt);
+          const autoVal = st === "pending" ? "…" : r.fixedAt && tick >= r.fixedAt ? r.manual : r.auto;
+          return (
+            <div key={r.id} className={`sv-trow${st === "fail" ? " fail" : checking ? " active" : ""}`}>
+              <span>{r.id}</span>
+              <span>{r.manual}</span>
+              <span className={st === "fail" ? "bad" : ""}>{autoVal}</span>
+              <span className={`sv-tstat ${st}`}>
+                {st === "pass" ? <Check size={11} strokeWidth={3} /> : st === "fail" ? <X size={11} strokeWidth={3} /> : null}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </VizShell>
+  );
+}
+
+// ---- 06 Deploy: shadow → subset → full load, rollback plan ready, then handoff ---------
+const DEPLOY_PCT = [0, 20, 100];
+
+function DeployAnimation({ t }) {
+  const d = t.deployDemo;
+  const FINAL = 10;
+  const tick = useTicker(14, 650, FINAL);
+  const stage = Math.min(DEPLOY_PCT.length - 1, Math.floor(tick / 3));
+  const pct = DEPLOY_PCT[stage];
+  const rollbackOn = tick >= 1;
+  const handoffOn = tick >= 9;
+
+  return (
+    <VizShell
+      label={d.label}
+      status={handoffOn ? d.done : d.rolling}
+      progress={Math.min(100, (tick / FINAL) * 100)}
+      chips={[
+        { text: d.chips[0], lit: rollbackOn },
+        { text: d.chips[1], lit: tick >= 6 },
+        { text: d.chips[2], lit: handoffOn },
+      ]}
+    >
+      <div className="sv-stages">
+        {d.stages.map((name, i) => (
+          <div key={i} className={`sv-stage${i === stage ? " current" : i < stage ? " past" : ""}`}>
+            <small>{pad2(i + 1)} · {DEPLOY_PCT[i]}%</small>
+            <div>{name}</div>
+          </div>
+        ))}
+      </div>
+      <div className="sv-load">
+        <div className="sv-load-row"><span>{d.bar}</span><span className="sv-load-pct">{pct}%</span></div>
+        <div className="sv-load-track"><div className="sv-load-fill" style={{ width: `${pct}%` }} /></div>
+      </div>
+      <div className="sv-checks">
+        <div className={`sv-check${rollbackOn ? " on" : ""}`}>
+          <span className={`sv-tstat ${rollbackOn ? "pass" : "pending"}`}>{rollbackOn && <Check size={10} strokeWidth={3} />}</span>
+          {d.rollback}
+        </div>
+        <div className={`sv-check${handoffOn ? " on" : ""}`}>
+          <span className={`sv-tstat ${handoffOn ? "pass" : "pending"}`}>{handoffOn && <Check size={10} strokeWidth={3} />}</span>
+          {d.handoff}
+        </div>
+      </div>
+    </VizShell>
+  );
+}
+
+// ---- 07 Monitor: runs stream in, one failure fires an alert, then it's resolved ---------
+const MONITOR_BARS = [46, 52, 49, 58, 55, 61, 57, 64, 92, 63, 68, 66];
+const MONITOR_FAIL = 8;
+
+function MonitorAnimation({ t }) {
+  const d = t.monitorDemo;
+  const FINAL = 13;
+  const tick = useTicker(17, 600, FINAL);
+  const shown = Math.min(MONITOR_BARS.length, tick);
+  const failVisible = tick > MONITOR_FAIL;
+  const alertOn = tick >= 10;
+  const resolved = tick >= 13;
+  const alertState = resolved ? "ok" : alertOn ? "alert" : "";
+  const kpis = [String(shown * 24), failVisible ? "1" : "0", `${(shown * 1.7).toFixed(1)}h`];
+
+  return (
+    <VizShell
+      label={d.label}
+      status={resolved ? d.watching : d.monitoring}
+      progress={Math.min(100, (tick / FINAL) * 100)}
+      chips={[
+        { text: d.chips[0], lit: tick >= 2 },
+        { text: d.chips[1], lit: tick >= 8 },
+        { text: d.chips[2], lit: tick >= 11 },
+      ]}
+    >
+      <div className="sv-kpis">
+        {d.kpis.map((k, i) => (
+          <div key={i} className={`sv-kpi${i === 1 && failVisible && !resolved ? " warn" : ""}`}>
+            <small>{k}</small>
+            <div>{kpis[i]}</div>
+          </div>
+        ))}
+      </div>
+      <div className="sv-chart">
+        {MONITOR_BARS.map((h, i) => {
+          const failing = i === MONITOR_FAIL && !resolved;
+          const height = i === MONITOR_FAIL && resolved ? 66 : h;
+          return <div key={i} className={`sv-cbar${i < shown ? " on" : ""}${failing ? " fail" : ""}`} style={{ height: `${height}%` }} />;
+        })}
+      </div>
+      <div className={`sv-alert ${alertState}`}>
+        {resolved ? <><Check size={14} />{d.resolved}</> : alertOn ? <><Bell size={14} />{d.alert}</> : d.healthy}
+      </div>
+    </VizShell>
+  );
+}
+
+// ---- 08 Improve: measured result vs. baseline, then a new candidate loops back ---------
+function ImproveAnimation({ t }) {
+  const d = t.improveDemo;
+  const FINAL = 9;
+  const tick = useTicker(14, 650, FINAL);
+  const nextOn = tick >= 7;
+
+  return (
+    <VizShell
+      label={d.label}
+      status={nextOn ? d.done : d.measuring}
+      progress={Math.min(100, (tick / FINAL) * 100)}
+      chips={[
+        { text: d.chips[0], lit: tick >= 1 },
+        { text: d.chips[1], lit: tick >= 3 },
+        { text: d.chips[2], lit: nextOn },
+      ]}
+    >
+      <div className="sv-cmp">
+        <div className="sv-cmp-row">
+          <small><span>{d.baseline.label}</span><b>{d.baseline.value}</b></small>
+          <div className="sv-cmp-track"><div className="sv-cmp-fill base" style={{ width: tick >= 1 ? "60%" : "0%" }} /></div>
+        </div>
+        <div className="sv-cmp-row">
+          <small><span>{d.measured.label}</span><b>{d.measured.value}</b></small>
+          <div className="sv-cmp-track"><div className="sv-cmp-fill meas" style={{ width: tick >= 3 ? "81%" : "0%" }} /></div>
+        </div>
+        <span className={`sv-delta${tick >= 5 ? " on" : ""}`}>{d.delta}</span>
+      </div>
+      <div className={`sv-next${nextOn ? " on" : ""}`}>
+        <span className="sv-next-ico"><RefreshCw size={16} className="sv-spin" /></span>
+        <div>
+          <small>{d.next.tag}</small>
+          <strong>{d.next.title}</strong>
+          <div className="sv-next-sub">{d.next.sub}</div>
+        </div>
+      </div>
+    </VizShell>
+  );
+}
+
 // Optional visual shown beside a stage's text. Map a stage id to a component
 // that takes `t` (the current language's content). Stages not listed here
 // render as plain text.
-const STAGE_VISUALS = { identify: IdentifyAnimation };
+const STAGE_VISUALS = {
+  identify: IdentifyAnimation,
+  assess: AssessAnimation,
+  design: DesignAnimation,
+  develop: DevelopAnimation,
+  test: TestAnimation,
+  deploy: DeployAnimation,
+  monitor: MonitorAnimation,
+  improve: ImproveAnimation,
+};
 
 function useScrollSpy(ids, offset = 130) {
   const [active, setActive] = useState(ids[0]);
