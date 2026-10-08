@@ -7,7 +7,6 @@
 //
 // EVERYTHING you'd normally touch lives in the CONFIG block below:
 //   THEME       — the two-color palette + derived tones
-//   ASSETS      — one place to swap in real images/drawings per stage
 //   STAGE_META  — structural, language-independent stage data (id + icon, in order)
 //   CONTENT     — ALL text, in both languages: CONTENT.en / CONTENT.no. This is the
 //                 one place to edit copy, and the one place to add a third language.
@@ -26,7 +25,7 @@
 // localStorage.
 //
 // STRUCTURE OF THIS FILE, top to bottom:
-//   1. Config: THEME, LANGUAGES, ASSETS, STAGE_META, CONTENT
+//   1. Config: THEME, LANGUAGES, STAGE_META, CONTENT
 //   2. Content persistence: useSiteContent / saveSiteContent / resetSiteContent
 //   3. Shared UI: GlobalStyles, Logo, nav, progress rail, scroll helpers
 //   4. HomeSection   — the "/" one-page journey
@@ -81,22 +80,6 @@ export const LANGUAGES = [
 export const LANG_STORAGE_KEY = "site-lang";
 
 // ---------------------------------------------------------------------------
-// ASSETS — set any of these to an image URL (or an imported local file) to
-// replace the generated placeholder graphic for that stage.
-// ---------------------------------------------------------------------------
-export const ASSETS = {
-  identify: null,
-  assess: null,
-  design: null,
-  develop: null,
-  test: null,
-  deploy: null,
-  monitor: null,
-  improve: null,
-  heroDiagram: null,
-};
-
-// ---------------------------------------------------------------------------
 // STAGE_META — structural only (id + icon + order). Text lives in CONTENT.
 // ---------------------------------------------------------------------------
 export const STAGE_META = [
@@ -127,7 +110,6 @@ export const CONTENT = {
     navProjects: "Projects",
     navAbout: "About",
     navContact: "Contact",
-    stagePlaceholder: (n) => `stage-${n}.svg — replace via ASSETS`,
     socials: { email: "mats.ostvig@example.com", github: "https://github.com/", linkedin: "https://linkedin.com/" },
     stages: {
       identify: {
@@ -262,7 +244,6 @@ export const CONTENT = {
     navProjects: "Prosjekter",
     navAbout: "Om meg",
     navContact: "Kontakt",
-    stagePlaceholder: (n) => `trinn-${n}.svg — bytt ut via ASSETS`,
     socials: { email: "mats.ostvig@example.com", github: "https://github.com/", linkedin: "https://linkedin.com/" },
     stages: {
       identify: {
@@ -520,155 +501,6 @@ export function resetSiteContent(lang) {
   try { localStorage.removeItem(contentOverrideKey(lang)); } catch {}
 }
 
-// =====================================================================================
-// Media (stage images) — separate from CONTENT because a photo should be the
-// same regardless of language. One Firestore doc total (collection "siteMedia",
-// doc "default") holds { stages: { identify: {src, scale, x, y}, ... } }.
-// src is either a data: URL (zero-setup fallback) or a Firebase Storage
-// download URL (used automatically once FIREBASE_ENABLED is true). scale is a
-// zoom multiplier (1 = fit, up to 2.5); x/y are CSS object-position percentages
-// used to pan/recenter the crop — this is what "reposition" means here.
-// =====================================================================================
-const MEDIA_COLLECTION = "siteMedia";
-const MEDIA_DOC_ID = "default";
-const MEDIA_STORAGE_KEY = "site-media-override";
-
-function defaultMedia() {
-  const stages = {};
-  STAGE_META.forEach((s) => { stages[s.id] = { src: ASSETS[s.id] || null, scale: 1, x: 50, y: 50 }; });
-  return { stages };
-}
-
-function readLocalMediaOverride() {
-  try {
-    const raw = localStorage.getItem(MEDIA_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function getEditableMedia() {
-  const local = readLocalMediaOverride();
-  return local ? deepMerge(defaultMedia(), local) : defaultMedia();
-}
-
-export function useSiteMedia() {
-  const [media, setMediaState] = useState(() => deepMerge(defaultMedia(), readLocalMediaOverride()));
-
-  useEffect(() => {
-    setMediaState(deepMerge(defaultMedia(), readLocalMediaOverride()));
-    if (!FIREBASE_ENABLED) return;
-    let unsub = () => {};
-    (async () => {
-      try {
-        const { initializeApp, getApps } = await import("firebase/app");
-        const { getFirestore, doc, onSnapshot } = await import("firebase/firestore");
-        const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        unsub = onSnapshot(
-          doc(db, MEDIA_COLLECTION, MEDIA_DOC_ID),
-          (snap) => { if (snap.exists()) setMediaState(deepMerge(defaultMedia(), snap.data())); },
-          () => {}
-        );
-      } catch (err) {
-        console.warn("Firestore media unavailable, using local/default.", err);
-      }
-    })();
-    return () => unsub();
-  }, []);
-
-  return [media];
-}
-
-export async function saveSiteMedia(media) {
-  try { localStorage.setItem(MEDIA_STORAGE_KEY, JSON.stringify(media)); } catch {}
-  if (!FIREBASE_ENABLED) return { ok: true, target: "local" };
-  try {
-    const { initializeApp, getApps } = await import("firebase/app");
-    const { getFirestore, doc, setDoc } = await import("firebase/firestore");
-    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    await setDoc(doc(db, MEDIA_COLLECTION, MEDIA_DOC_ID), media);
-    return { ok: true, target: "firebase" };
-  } catch (err) {
-    console.error(err);
-    return { ok: false, target: "firebase", error: err };
-  }
-}
-
-export function resetSiteMedia() {
-  try { localStorage.removeItem(MEDIA_STORAGE_KEY); } catch {}
-}
-
-// Downscales an uploaded file client-side before storing it, so a phone photo
-// doesn't blow past localStorage/Firestore size limits. Returns a JPEG Blob.
-function resizeImageFile(file, maxDim = 1600, quality = 0.85) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      let { width, height } = img;
-      if (width > maxDim || height > maxDim) {
-        const ratio = Math.min(maxDim / width, maxDim / height);
-        width = Math.round(width * ratio);
-        height = Math.round(height * ratio);
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-      canvas.toBlob((blob) => { URL.revokeObjectURL(url); resolve(blob); }, "image/jpeg", quality);
-    };
-    img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
-    img.src = url;
-  });
-}
-
-function blobToDataURL(blob) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(blob);
-  });
-}
-
-// Guarantees a promise settles within `ms`, rejecting with `new Error(message)`
-// otherwise. Used so an image upload/resize can never leave the admin panel
-// stuck on "Processing…" forever, regardless of what actually goes wrong.
-function withTimeout(promise, ms, message) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
-  ]);
-}
-
-// Tries Firebase Storage first (small download-URL string, no size worries);
-// falls back to an inline data: URL (works with zero setup, but counts against
-// localStorage's ~5-10MB quota and Firestore's 1MiB-per-document limit).
-async function uploadStageImage(file) {
-  const blob = await resizeImageFile(file);
-  if (FIREBASE_ENABLED) {
-    try {
-      const { initializeApp, getApps } = await import("firebase/app");
-      const { getStorage, ref, uploadBytes, getDownloadURL } = await import("firebase/storage");
-      const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-      const storage = getStorage(app);
-      const path = `site-media/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      const storageRef = ref(storage, path);
-      // Firebase Storage retries failed uploads internally with its own
-      // backoff, which can run well past our outer safety timeout — racing
-      // against a short timeout here means a blocked/failing upload gives up
-      // and falls through to the inline-image path quickly instead of the
-      // whole thing eventually erroring out with nothing saved.
-      await withTimeout(uploadBytes(storageRef, blob), 8000, "storage-timeout");
-      return await getDownloadURL(storageRef);
-    } catch (err) {
-      console.warn("Firebase Storage upload failed or timed out, falling back to an inline image.", err);
-    }
-  }
-  return blobToDataURL(blob);
-}
 
 // =====================================================================================
 // Global styles
@@ -720,7 +552,7 @@ export function GlobalStyles() {
 
       .rpa-hero{ position:relative; padding:96px 0 72px; overflow:hidden; }
       .rpa-hero::before{ content:""; position:absolute; top:-120px; right:-120px; width:420px; height:420px; border-radius:50%; background:radial-gradient(circle,var(--rpa-primary-soft) 0%,transparent 70%); z-index:0; }
-      .rpa-hero .rpa-wrap{ position:relative; z-index:1; display:grid; grid-template-columns:1.15fr 0.85fr; gap:40px; align-items:center; }
+      .rpa-hero .rpa-wrap{ position:relative; z-index:1; display:grid; grid-template-columns:1.15fr 0.85fr; gap:40px; align-items:start; }
       @media (max-width:900px){ .rpa-hero .rpa-wrap{ grid-template-columns:1fr; } .hero-anim{ display:none; } }
       .rpa-kicker{ font-family:'JetBrains Mono',monospace; font-size:0.82rem; color:var(--rpa-primary-dark); margin-bottom:16px; }
       .rpa-hero h1{ font-size:clamp(1.9rem,3.2vw,2.75rem); line-height:1.22; letter-spacing:-0.015em; max-width:24ch; }
@@ -730,12 +562,11 @@ export function GlobalStyles() {
          Every segment between consecutive nodes is exactly 120 units (4 across,
          1 down, 4 back), so a linear-speed dot and linear-fraction node timing
          (i/7) stay mathematically in sync — this is what fixes the drift. */
-      .hero-anim{ width:100%; }
+      .hero-anim{ width:100%; padding-top:36px; }
       .hero-anim svg{ width:100%; height:auto; overflow:visible; }
       .hero-anim .ha-dash{ stroke:var(--rpa-line); stroke-width:1.6; stroke-dasharray:4 5; fill:none; }
       .hero-anim .ha-circle{ fill:var(--rpa-paper); stroke:var(--rpa-line); stroke-width:1.6; transition:stroke .2s ease; }
       .hero-anim .ha-node.lit .ha-circle{ stroke:var(--rpa-primary); }
-      .hero-anim .ha-icon{ stroke:var(--rpa-primary); fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
       .hero-anim .ha-label{ font-family:'JetBrains Mono',monospace; font-size:9.5px; fill:var(--rpa-ink-soft); }
       .hero-anim .ha-dot{
         offset-path: path("M44,44 L164,44 L284,44 L404,44 L404,164 L284,164 L164,164 L44,164");
@@ -758,9 +589,7 @@ export function GlobalStyles() {
       .rpa-journey{ position:relative; padding-top:24px; }
       .rpa-stage-band{ padding:72px 0; scroll-margin-top:90px; }
       .rpa-stage-band.alt{ background:var(--rpa-paper-dim); }
-      .rpa-stage{ scroll-margin-top:90px; display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; }
-      .rpa-stage.flip{ direction:rtl; }
-      .rpa-stage.flip > *{ direction:ltr; }
+      .rpa-stage{ scroll-margin-top:90px; max-width:640px; }
       .rpa-stage-icon{ width:46px; height:46px; border-radius:14px; background:var(--rpa-primary-soft); color:var(--rpa-primary); display:flex; align-items:center; justify-content:center; margin-bottom:18px; }
       .rpa-stage h2{ font-size:clamp(1.6rem,2.6vw,2.2rem); }
       .rpa-stage .rpa-summary{ color:var(--rpa-ink-soft); max-width:46ch; margin-bottom:20px; }
@@ -768,11 +597,6 @@ export function GlobalStyles() {
       .rpa-block:first-of-type{ border-top:none; }
       .rpa-block h4{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:1rem; margin:0 0 4px; }
       .rpa-block p{ color:var(--rpa-ink-soft); margin:0; font-size:0.95rem; }
-      .rpa-stage-art{ border-radius:20px; border:1px solid var(--rpa-line); background:#fff; padding:20px; box-shadow:0 1px 3px rgba(15,23,42,0.05); }
-      .rpa-stage-art img{ width:100%; border-radius:12px; display:block; }
-      .rpa-stage-art-frame{ position:relative; width:100%; aspect-ratio:4/3; overflow:hidden; border-radius:12px; background:var(--rpa-paper-dim); }
-      .rpa-stage-art-frame img{ width:100%; height:100%; object-fit:cover; border-radius:0; transition:transform .15s ease, object-position .15s ease; }
-      @media (max-width:860px){ .rpa-stage{ grid-template-columns:1fr; } .rpa-stage.flip{ direction:ltr; } .rpa-stage.flip > *{ direction:ltr; } }
 
       .rpa-section{ padding:72px 0; scroll-margin-top:90px; }
       .rpa-section.alt{ background:var(--rpa-paper-dim); }
@@ -835,52 +659,6 @@ function Block({ heading, body }) {
   );
 }
 
-function StagePlaceholderArt({ index, caption }) {
-  const seed = (index * 47) % 360;
-  return (
-    <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "auto" }}>
-      <defs>
-        <radialGradient id={`g${index}`} cx="50%" cy="50%" r="65%">
-          <stop offset="0%" stopColor={THEME.primary} stopOpacity="0.18" />
-          <stop offset="100%" stopColor={THEME.primary} stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <rect width="400" height="300" fill={`url(#g${index})`} />
-      <g stroke={THEME.primary} strokeWidth="1.4" fill="none" opacity="0.85" transform={`rotate(${seed % 12} 200 150)`}>
-        <circle cx="200" cy="150" r="70" strokeDasharray="4 5" />
-        <circle cx="200" cy="150" r="110" opacity="0.5" />
-        {[0, 60, 120, 180, 240, 300].map((a) => {
-          const rad = (a * Math.PI) / 180;
-          const x = 200 + 70 * Math.cos(rad);
-          const y = 150 + 70 * Math.sin(rad);
-          return <circle key={a} cx={x} cy={y} r="4" fill={THEME.primary} stroke="none" />;
-        })}
-        <line x1="200" y1="80" x2="200" y2="220" opacity="0.4" />
-        <line x1="130" y1="150" x2="270" y2="150" opacity="0.4" />
-      </g>
-      <text x="20" y="284" fontFamily="JetBrains Mono, monospace" fontSize="11" fill={THEME.inkSoft}>{caption}</text>
-    </svg>
-  );
-}
-
-function StageArt({ stageId, index, caption, image }) {
-  const img = image || { src: null, scale: 1, x: 50, y: 50 };
-  return (
-    <div className="rpa-stage-art">
-      {img.src ? (
-        <div className="rpa-stage-art-frame">
-          <img
-            src={img.src}
-            alt={`${stageId} illustration`}
-            style={{ transform: `scale(${img.scale})`, objectPosition: `${img.x}% ${img.y}%` }}
-          />
-        </div>
-      ) : (
-        <StagePlaceholderArt index={index} caption={caption} />
-      )}
-    </div>
-  );
-}
 
 // Node centers, in the exact order the dot travels them. Every consecutive
 // pair is 120 units apart (see the offset-path in GlobalStyles) so that a
@@ -889,20 +667,6 @@ const HERO_ANIM_NODES = [
   { x: 44, y: 44 }, { x: 164, y: 44 }, { x: 284, y: 44 }, { x: 404, y: 44 },
   { x: 404, y: 164 }, { x: 284, y: 164 }, { x: 164, y: 164 }, { x: 44, y: 164 },
 ];
-
-function HeroAnimIcon({ i }) {
-  // Tiny hand-drawn glyphs, same visual language as the stage placeholder art.
-  switch (i) {
-    case 0: return <g className="ha-icon" transform="translate(-7,-7)"><circle cx="6" cy="6" r="6" /><line x1="10.5" y1="10.5" x2="15" y2="15" /></g>; // Identify
-    case 1: return <g className="ha-icon" transform="translate(-7,-9)"><rect x="0" y="0" width="14" height="18" rx="1.5" /><line x1="3" y1="5" x2="11" y2="5" /><line x1="3" y1="9" x2="11" y2="9" /><line x1="3" y1="13" x2="8" y2="13" /></g>; // Assess
-    case 2: return <g className="ha-icon"><circle r="9" /><path d="M-3,-3 L3,3 M3,-3 L2,2" /></g>; // Design
-    case 3: return <g className="ha-icon" transform="translate(-9,-6)"><path d="M5 0 L0 6 L5 12" /><path d="M13 0 L18 6 L13 12" /></g>; // Develop
-    case 4: return <g className="ha-icon" transform="translate(-6,-9)"><path d="M4 0 L4 6 L0 16 Q6 19 12 16 L8 6 L8 0" /></g>; // Test
-    case 5: return <g className="ha-icon" transform="translate(-6,-10)"><path d="M6 20 C2 14 2 6 6 0 C10 6 10 14 6 20 Z" /><circle cx="6" cy="7" r="1.6" /></g>; // Deploy
-    case 6: return <g className="ha-icon" transform="translate(-11,-5)"><path d="M0 5 L5 5 L8 -4 L13 12 L16 5 L22 5" /></g>; // Monitor
-    default: return <g className="ha-icon" transform="translate(-9,-7)"><path d="M0 12 L6 4 L10 8 L18 -2" /><path d="M12 -2 L18 -2 L18 4" /></g>; // Improve
-  }
-}
 
 function HeroAnimation({ labels }) {
   const nodeRefs = useRef([]);
@@ -933,13 +697,18 @@ function HeroAnimation({ labels }) {
     <div className="hero-anim" aria-hidden="true">
       <svg viewBox="0 0 448 215" xmlns="http://www.w3.org/2000/svg">
         <path className="ha-dash" d="M44,44 L164,44 L284,44 L404,44 L404,164 L284,164 L164,164 L44,164" />
-        {HERO_ANIM_NODES.map((n, i) => (
-          <g key={i} ref={(el) => (nodeRefs.current[i] = el)} className="ha-node" transform={`translate(${n.x},${n.y})`}>
-            <circle r="20" className="ha-circle" />
-            <HeroAnimIcon i={i} />
-            <text y="36" textAnchor="middle" className="ha-label">{labels[i]}</text>
-          </g>
-        ))}
+        {HERO_ANIM_NODES.map((n, i) => {
+          const Icon = STAGE_META[i].icon;
+          return (
+            <g key={i} ref={(el) => (nodeRefs.current[i] = el)} className="ha-node" transform={`translate(${n.x},${n.y})`}>
+              <circle r="20" className="ha-circle" />
+              <g transform="translate(-9,-9)">
+                <Icon size={18} color={THEME.primary} strokeWidth={1.8} />
+              </g>
+              <text y="36" textAnchor="middle" className="ha-label">{labels[i]}</text>
+            </g>
+          );
+        })}
         <circle className="ha-dot" r="4.5" fill="var(--rpa-primary)" />
       </svg>
     </div>
@@ -1029,7 +798,6 @@ function TopNav({ activeId, t, lang, setLang }) {
 function HomeSection() {
   const [lang, setLang] = useLanguage();
   const [t] = useSiteContent(lang);
-  const [media] = useSiteMedia();
   const sectionIds = useMemo(() => ["home", ...STAGE_META.map((s) => s.id), "news", "projects"], []);
   const active = useScrollSpy(sectionIds);
   const news = t.news.items;
@@ -1059,22 +827,19 @@ function HomeSection() {
         {STAGE_META.map((meta, i) => {
           const Icon = meta.icon;
           const stage = t.stages[meta.id];
-          const flipped = i % 2 === 1;
+          const alt = i % 2 === 1;
           return (
-            <div className={`rpa-stage-band${flipped ? " alt" : ""}`} key={meta.id} id={meta.id}>
+            <div className={`rpa-stage-band${alt ? " alt" : ""}`} key={meta.id} id={meta.id}>
               <div className="rpa-wrap">
-                <section className={`rpa-stage${flipped ? " flip" : ""}`}>
-                  <div>
-                    <div className="rpa-stage-icon"><Icon size={22} /></div>
-                    <div className="rpa-kicker">{stage.kicker}</div>
-                    <h2 className="rpa-h">{stage.title}</h2>
-                    <p className="rpa-summary">{stage.summary}</p>
-                    {/* Add more entries to CONTENT[lang].stages.<id>.blocks to extend this stage */}
-                    {stage.blocks.map((b, bi) => (
-                      <Block key={bi} heading={b.heading} body={b.body} />
-                    ))}
-                  </div>
-                  <StageArt stageId={meta.id} index={i} caption={t.stagePlaceholder(String(i + 1).padStart(2, "0"))} image={media.stages[meta.id]} />
+                <section className="rpa-stage">
+                  <div className="rpa-stage-icon"><Icon size={22} /></div>
+                  <div className="rpa-kicker">{stage.kicker}</div>
+                  <h2 className="rpa-h">{stage.title}</h2>
+                  <p className="rpa-summary">{stage.summary}</p>
+                  {/* Add more entries to CONTENT[lang].stages.<id>.blocks to extend this stage */}
+                  {stage.blocks.map((b, bi) => (
+                    <Block key={bi} heading={b.heading} body={b.body} />
+                  ))}
                 </section>
               </div>
             </div>
@@ -1318,12 +1083,10 @@ function ContactSection() {
 const ADMIN_PASSPHRASE = "changeme"; // change this, and read the security note above
 
 function cloneContent(value) {
-  // JSON round-trip on purpose, not structuredClone: CONTENT includes a small
-  // helper function (stagePlaceholder) that structuredClone throws on.
-  // JSON.stringify silently drops function-valued keys instead, which is
-  // exactly what we want — the admin draft never needs to carry that function
-  // around, and useSiteContent's deepMerge restores it from CONTENT[lang]
-  // automatically when the edited content is read back.
+  // JSON round-trip on purpose, not structuredClone: structuredClone throws if
+  // CONTENT ever contains a function, whereas JSON.stringify silently drops
+  // function-valued keys (and useSiteContent's deepMerge restores them from
+  // CONTENT[lang] when the edited content is read back).
   return JSON.parse(JSON.stringify(value));
 }
 
@@ -1347,89 +1110,6 @@ function TextAreaField({ label, value, onChange }) {
     </div>
   );
 }
-
-// Upload (or paste a URL), then rescale and reposition the crop. `value` is
-// {src, scale, x, y} — see the "Media" section near the top of this file for
-// what each field means and how it's persisted.
-function ImageEditor({ label, value, onChange }) {
-  const v = value || { src: null, scale: 1, x: 50, y: 50 };
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState(null);
-
-  async function handleFile(file) {
-    if (!file) return;
-    setError(null);
-
-    // Browsers generally can't decode HEIC/HEIF (the default format on modern
-    // iPhones) via <img>, which used to make this hang forever with no error —
-    // catch it up front instead of trying and timing out.
-    const name = file.name.toLowerCase();
-    if (file.type === "image/heic" || file.type === "image/heif" || name.endsWith(".heic") || name.endsWith(".heif")) {
-      setError("That's a HEIC/HEIF photo (the iPhone default) — browsers can't read this format. Convert it to JPG/PNG first, or switch your iPhone's Camera settings to \"Most Compatible\", then try again.");
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const src = await withTimeout(uploadStageImage(file), 20000, "timeout");
-      onChange({ ...v, src });
-    } catch (err) {
-      console.error(err);
-      setError(
-        err?.message === "timeout"
-          ? "That took too long to process — try a smaller image or a different file format."
-          : "Couldn't process that image — try a different file."
-      );
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  return (
-    <div className="adm-list">
-      <div className="adm-list-label">{label}</div>
-      <div className="adm-image-row">
-        <div className="adm-image-preview">
-          {v.src
-            ? <img src={v.src} alt="" style={{ transform: `scale(${v.scale})`, objectPosition: `${v.x}% ${v.y}%` }} />
-            : <span className="adm-muted">No image — placeholder art shows instead</span>}
-        </div>
-        <div className="adm-image-controls">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => { handleFile(e.target.files?.[0]); e.target.value = ""; }}
-          />
-          {uploading && <span className="adm-muted">Processing…</span>}
-          {error && <span className="adm-status error">{error}</span>}
-          <TextField
-            label="…or paste an image URL instead"
-            value={v.src && !v.src.startsWith("data:") ? v.src : ""}
-            onChange={(val) => onChange({ ...v, src: val || null })}
-          />
-          <div className="adm-field">
-            <label>Zoom ({Math.round(v.scale * 100)}%)</label>
-            <input type="range" min="100" max="250" value={Math.round(v.scale * 100)} onChange={(e) => onChange({ ...v, scale: Number(e.target.value) / 100 })} />
-          </div>
-          <div className="adm-field">
-            <label>Reposition — horizontal ({v.x}%)</label>
-            <input type="range" min="0" max="100" value={v.x} onChange={(e) => onChange({ ...v, x: Number(e.target.value) })} />
-          </div>
-          <div className="adm-field">
-            <label>Reposition — vertical ({v.y}%)</label>
-            <input type="range" min="0" max="100" value={v.y} onChange={(e) => onChange({ ...v, y: Number(e.target.value) })} />
-          </div>
-          {v.src && (
-            <button type="button" className="adm-remove" onClick={() => onChange({ src: null, scale: 1, x: 50, y: 50 })}>
-              Remove image
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // {heading, body} list — used for stage blocks, About timeline, Contact details
 function HeadingBodyListEditor({ label, items, onChange, headingLabel = "Heading", bodyLabel = "Body" }) {
   function update(i, key, val) {
@@ -1563,13 +1243,6 @@ function AdminStyles() {
       .adm-list-item:first-of-type{ border-top:none; padding-top:0; }
       .adm-list-item input, .adm-list-item textarea{ width:100%; font-family:'Inter',sans-serif; font-size:0.94rem; padding:9px 11px; border:1.5px solid var(--rpa-line); border-radius:8px; }
       .adm-list-item textarea{ min-height:60px; resize:vertical; }
-      .adm-image-row{ display:flex; gap:20px; flex-wrap:wrap; }
-      .adm-image-preview{ width:180px; height:135px; flex:none; border:1px solid var(--rpa-line); border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center; background:var(--rpa-paper-dim); text-align:center; padding:8px; }
-      .adm-image-preview img{ width:100%; height:100%; object-fit:cover; }
-      .adm-image-preview span{ font-size:0.78rem; color:var(--rpa-ink-soft); }
-      .adm-image-controls{ flex:1; min-width:240px; display:flex; flex-direction:column; gap:12px; }
-      .adm-image-controls input[type="range"]{ width:100%; accent-color:var(--rpa-primary); }
-      .adm-image-controls input[type="file"]{ font-size:0.85rem; }
       .adm-remove{ align-self:flex-start; font-family:'JetBrains Mono',monospace; font-size:0.76rem; color:#B3261E; background:none; border:1px solid #B3261E; border-radius:999px; padding:4px 11px; cursor:pointer; }
       .adm-add{ font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--rpa-primary-dark); background:var(--rpa-primary-soft); border:1px solid var(--rpa-primary); border-radius:999px; padding:7px 14px; cursor:pointer; margin-top:8px; }
       .adm-chips{ display:flex; flex-wrap:wrap; gap:8px; }
@@ -1618,7 +1291,6 @@ function AdminSection() {
 
   const [lang, setLang] = useState(LANGUAGES[0].code);
   const [draft, setDraft] = useState(() => getEditableContent(lang));
-  const [mediaDraft, setMediaDraft] = useState(() => getEditableMedia());
   const [tab, setTab] = useState("general");
   const [status, setStatus] = useState(null);
 
@@ -1637,33 +1309,18 @@ function AdminSection() {
     });
   }
 
-  function setMedia(path, value) {
-    setMediaDraft((prev) => {
-      const clone = cloneContent(prev);
-      let node = clone;
-      for (let i = 0; i < path.length - 1; i++) node = node[path[i]];
-      node[path[path.length - 1]] = value;
-      return clone;
-    });
-  }
-
   async function handleSave() {
     setStatus({ type: "pending", message: "Saving…" });
-    const [contentRes, mediaRes] = await Promise.all([
-      saveSiteContent(lang, draft),
-      saveSiteMedia(mediaDraft),
-    ]);
-    const ok = contentRes.ok && mediaRes.ok;
-    const wentLive = contentRes.target === "firebase" && mediaRes.target === "firebase";
+    const res = await saveSiteContent(lang, draft);
     setStatus(
-      ok
-        ? { type: "ok", message: wentLive ? "Saved to Firebase — live for every visitor." : "Saved in this browser (Firebase not connected — see README.md)." }
+      res.ok
+        ? { type: "ok", message: res.target === "firebase" ? "Saved to Firebase — live for every visitor." : "Saved in this browser (Firebase not connected — see README.md)." }
         : { type: "error", message: "Firebase save failed (see console). Your changes are still saved locally." }
     );
   }
 
   function handleReset() {
-    if (!window.confirm("Discard saved overrides and revert this language to the code defaults? (Images are shared across languages and won't be affected — remove them individually in the Journey tab if needed.)")) return;
+    if (!window.confirm("Discard saved overrides and revert this language to the code defaults?")) return;
     resetSiteContent(lang);
     setDraft(getEditableContent(lang));
     setStatus({ type: "ok", message: "Reverted to code defaults." });
@@ -1760,7 +1417,6 @@ function AdminSection() {
                   <TextField label="Title" value={draft.stages[s.id].title} onChange={(v) => set(["stages", s.id, "title"], v)} />
                   <TextAreaField label="Summary" value={draft.stages[s.id].summary} onChange={(v) => set(["stages", s.id, "summary"], v)} />
                   <HeadingBodyListEditor label="Blocks (the sub-sections under this stage)" items={draft.stages[s.id].blocks} onChange={(v) => set(["stages", s.id, "blocks"], v)} />
-                  <ImageEditor label="Stage image (shared across languages)" value={mediaDraft.stages[s.id]} onChange={(v) => setMedia(["stages", s.id], v)} />
                 </div>
               </details>
             ))}
