@@ -94,6 +94,16 @@ export const STAGE_META = [
 ];
 
 // ---------------------------------------------------------------------------
+// STAGE_EMBEDS — optional animation/visual shown beside a stage's text. Map a
+// stage id to an embeddable URL (e.g. a MagicPath "?embed=true" link). Stages
+// not listed here render as plain text. `ratio` is the frame's CSS
+// aspect-ratio — adjust it to match your animation so nothing gets cropped.
+// ---------------------------------------------------------------------------
+export const STAGE_EMBEDS = {
+  identify: { url: "https://designs.magicpath.ai/v1/crisp-brook-1378?embed=true", ratio: "4 / 3" },
+};
+
+// ---------------------------------------------------------------------------
 // CONTENT — every string on the site, per language. This is the file's single
 // source of truth for copy.
 // ---------------------------------------------------------------------------
@@ -590,6 +600,11 @@ export function GlobalStyles() {
       .rpa-stage-band{ padding:72px 0; scroll-margin-top:90px; }
       .rpa-stage-band.alt{ background:var(--rpa-paper-dim); }
       .rpa-stage{ scroll-margin-top:90px; max-width:640px; }
+      .rpa-stage.has-embed{ max-width:none; display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; }
+      .rpa-stage-text{ max-width:640px; }
+      .rpa-stage-embed{ width:100%; border:1px solid var(--rpa-line); border-radius:16px; overflow:hidden; background:#fff; box-shadow:0 1px 3px rgba(15,23,42,0.05); }
+      .rpa-stage-embed iframe{ display:block; width:100%; height:100%; border:0; }
+      @media (max-width:860px){ .rpa-stage.has-embed{ grid-template-columns:1fr; gap:32px; } }
       .rpa-stage-icon{ width:46px; height:46px; border-radius:14px; background:var(--rpa-primary-soft); color:var(--rpa-primary); display:flex; align-items:center; justify-content:center; margin-bottom:18px; }
       .rpa-stage h2{ font-size:clamp(1.6rem,2.6vw,2.2rem); }
       .rpa-stage .rpa-summary{ color:var(--rpa-ink-soft); max-width:46ch; margin-bottom:20px; }
@@ -831,15 +846,27 @@ function HomeSection() {
           return (
             <div className={`rpa-stage-band${alt ? " alt" : ""}`} key={meta.id} id={meta.id}>
               <div className="rpa-wrap">
-                <section className="rpa-stage">
-                  <div className="rpa-stage-icon"><Icon size={22} /></div>
-                  <div className="rpa-kicker">{stage.kicker}</div>
-                  <h2 className="rpa-h">{stage.title}</h2>
-                  <p className="rpa-summary">{stage.summary}</p>
-                  {/* Add more entries to CONTENT[lang].stages.<id>.blocks to extend this stage */}
-                  {stage.blocks.map((b, bi) => (
-                    <Block key={bi} heading={b.heading} body={b.body} />
-                  ))}
+                <section className={`rpa-stage${STAGE_EMBEDS[meta.id] ? " has-embed" : ""}`}>
+                  <div className="rpa-stage-text">
+                    <div className="rpa-stage-icon"><Icon size={22} /></div>
+                    <div className="rpa-kicker">{stage.kicker}</div>
+                    <h2 className="rpa-h">{stage.title}</h2>
+                    <p className="rpa-summary">{stage.summary}</p>
+                    {/* Add more entries to CONTENT[lang].stages.<id>.blocks to extend this stage */}
+                    {stage.blocks.map((b, bi) => (
+                      <Block key={bi} heading={b.heading} body={b.body} />
+                    ))}
+                  </div>
+                  {STAGE_EMBEDS[meta.id] && (
+                    <div className="rpa-stage-embed" style={{ aspectRatio: STAGE_EMBEDS[meta.id].ratio }}>
+                      <iframe
+                        src={STAGE_EMBEDS[meta.id].url}
+                        title={`${stage.title} animation`}
+                        loading="lazy"
+                        allow="fullscreen"
+                      />
+                    </div>
+                  )}
                 </section>
               </div>
             </div>
