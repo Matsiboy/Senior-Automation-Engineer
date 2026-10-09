@@ -1,8 +1,9 @@
 # Mats Østvig — Senior Automation Engineer
 
-A one-page RPA-lifecycle site (Identify → Improve) with About/Contact subpages,
-an English/Norwegian switcher, and an `/admin` panel that edits every section
-of every page — with all content optionally synced live through Firebase.
+A one-page eight-stage site (Identify → Improve) that tells its story two ways —
+**RPA** or **Agentic AI**, switched with the toggle in the nav — with About/Contact
+subpages and an `/admin` panel that edits every section of every page, with all
+content optionally synced live through Firebase.
 
 ## File structure
 
@@ -16,7 +17,7 @@ your-repo/
 │   ├── main.jsx               # entry point — just mounts <App/> in a HashRouter.
 │   │                          #   One-time scaffolding; you shouldn't need to touch this again.
 │   └── App.jsx                 # THE WHOLE SITE: config, all 4 routes (Home/About/Contact/Admin),
-│                               #   every section, both languages. This is the only file you
+│                               #   every section, both stories (RPA + Agentic AI). This is the only file you
 │                               #   need to edit or re-upload for content/section changes.
 ├── index.html                 # Vite root HTML — one-time scaffolding
 ├── package.json               # one-time scaffolding
@@ -85,72 +86,98 @@ in `/admin` go live for everyone immediately.
    ```
 
 ### How content is stored
-Everything editable in `/admin` lives in **one Firestore document per language**:
-`siteContent/en` and `siteContent/no`. You don't need to create these manually —
+Everything editable in `/admin` lives in **one Firestore document per story**:
+`siteContent/en` (the RPA story — it keeps its original id so anything you saved
+earlier still loads) and `siteContent/ai` (the Agentic AI story). The old
+`siteContent/no` (Norwegian) document is no longer used and can be deleted. You
+don't need to create these manually —
 the first time you click **Save changes** in `/admin` with Firebase connected, it
 creates the document for you (`setDoc` creates-or-overwrites). The public site
 subscribes to these documents live (`onSnapshot`), so an edit shows up for open
 tabs without a page refresh.
 
 There are no separate `news` / `projects` collections — those are just arrays
-inside the same per-language document, edited from the News/Projects tabs in
+inside the same per-story document, edited from the News/Projects tabs in
 `/admin`, same as every other section.
 
-### Lock down the security rules
-By default a fresh Firestore project either blocks everything or (in "test mode")
-allows anyone to read *and write*. You want public **read**, but **write** only
-from your admin panel. In Firebase console → **Firestore Database → Rules**:
+### Security rules
+By default a fresh Firestore/Storage project either blocks everything, or (in
+"test mode") allows anyone to read *and* write for 30 days before locking down
+automatically. This project's `/admin` panel gates itself with a **passphrase**
+only (`ADMIN_PASSPHRASE` in `App.jsx`'s AdminSection) — that's a convenience
+speed bump, not real authentication. Firebase has no idea you "logged in"; it
+never gets told, so `request.auth` is always `null` from Firebase's point of
+view, and rules like `allow write: if request.auth != null` will reject every
+save (and produce the confusing "CORS" error on Storage uploads specifically —
+Firebase's default 403-on-denied-write response is missing CORS headers, which
+browsers report as a blocked cross-origin request instead of a clean
+permission error).
 
+**This project runs with open write rules** — anyone with your Firebase config
+(which is visible in the deployed JS bundle, unavoidably, for any client app)
+could technically write to `siteContent` or upload files to `site-media`. That
+tradeoff is reasonable for a low-stakes personal site where you're the only one
+who knows the `/admin` URL and passphrase, but isn't appropriate if this ever
+holds anything sensitive. If you want it properly locked down instead, add real
+Firebase Auth (Firebase console → **Build → Authentication** → enable
+Email/Password, add yourself as a user, and swap the passphrase check in
+AdminSection for `signInWithEmailAndPassword`), then switch both rules below
+back to `if request.auth != null`.
+
+**Firestore** — console → **Firestore Database → Rules**:
 ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /siteContent/{lang} {
+    match /siteContent/{docId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if true;
     }
   }
 }
 ```
 
-This requires a signed-in Firebase Auth user to write. The `/admin` panel in this
-project currently gates itself with a **passphrase** (`ADMIN_PASSPHRASE` in
-`App.jsx`'s AdminSection), which is a convenience speed bump, **not real security** — it
-lives in the shipped JS bundle, so anyone technical can read it. With the rule
-above, that stops mattering for your data (writes need real Firebase Auth either
-way), but if you want `/admin` itself properly gated too:
+Firebase Storage isn't used any more (the per-stage image uploads were removed),
+so there's no Storage setup or Blaze plan needed.
 
-1. Firebase console → **Build → Authentication → Sign-in method** → enable
-   **Email/Password** (simplest) and add yourself as a user.
-2. Add `firebase/auth` sign-in to AdminSection's gate in `App.jsx` (replace the passphrase
-   check with `signInWithEmailAndPassword`), so the same login also satisfies
-   `request.auth != null` in the rule above.
-
-If you'd rather skip Firebase Auth entirely and only ever run `/admin` locally on
-your own machine (never deploy that route), you can leave `FIREBASE_ENABLED` off,
-edit via `localStorage` locally, and periodically copy the resulting JSON
-(`localStorage["site-content-override-en"]` in devtools) into `CONTENT.en` in
-`App.jsx` directly as your "real" save — no Firestore rules to manage at all.
+If you'd rather skip Firebase entirely and only ever run `/admin` locally on
+your own machine, leave `FIREBASE_ENABLED` off — edits save to that browser's
+`localStorage` only, with no rules to manage at all.
 
 ### Quick test
 1. `FIREBASE_ENABLED = true`, real `firebaseConfig`, rules pasted in.
 2. Run locally (`npm run dev`), open `/admin`, change something (e.g. add a News item), **Save changes**.
 3. Status bar should say "Saved to Firebase — live for every visitor."
-4. Refresh `/` — the change should be there. Open Firestore console → you should see `siteContent/en`.
+4. Refresh `/` — the change should be there. Open Firestore console → you should see `siteContent/en` (RPA) or `siteContent/ai`.
 
 ## Add a section to any lifecycle stage, About, or Contact
-Either edit `CONTENT.en` / `CONTENT.no` directly in `App.jsx`, or (easier) use
-`/admin` → the relevant tab → **+ Add entry**. Both write to the same place.
+Either edit `RPA_CONTENT` / `AI_CONTENT` directly in `App.jsx`, or (easier) use
+`/admin` → pick the story in the top-right dropdown → the relevant tab →
+**+ Add entry**. Both write to the same place. Note that the two stories start
+out sharing the same About / Contact / footer text but are stored separately, so
+edit those in each story (or tell me and I'll make them truly shared).
 
-## Swap images/drawings
-`ASSETS` in `App.jsx` — set e.g. `identify: "/my-image.png"` (drop the file in
-`public/`) to replace that stage's generated placeholder graphic.
+The text inside the stage animations (`identifyDemo`, `assessDemo`, …) lives in
+`App.jsx` only and isn't editable from `/admin`.
+
+## Logo
+The "mats." logo (bracket, arrow and wordmark) is drawn as vector inside `App.jsx`
+(`Logo` component), in your theme colors, so it stays sharp at any size and needs
+no image file. `public/logo.svg` is the same logo as a standalone file (handy for
+LinkedIn, email signatures, etc.) and `index.html` uses the bracket-and-arrow
+symbol as the browser-tab icon.
+
+To use a different image instead, put it in `public/` and set
+`export const LOGO = { src: "your-logo.svg" };` in `App.jsx`.
 
 ## Colors
-`THEME` in `App.jsx` — `primary: "#3B60C5"`, `paper: "#FDF2DE"`. Everything else
-derives from these two.
+`THEME` in `App.jsx` — `primary: "#2563EB"`, `paper: "#FFFFFF"`. Everything else
+derives from these.
 
-## Language (English / Norwegian)
-Flag buttons in the nav, backed by `CONTENT.en` / `CONTENT.no` in `App.jsx`. To
-add a third language: copy the `en` shape under a new key, translate it, and add
-it to the `LANGUAGES` array.
+## RPA / Agentic AI toggle
+The segmented toggle in the nav switches the whole page between the two stories,
+backed by `CONTENT.rpa` and `CONTENT.ai` (built from `RPA_CONTENT` and
+`AI_CONTENT` in `App.jsx`). The choice is remembered per browser. The eight
+stages keep the same ids in both, so the nav, scroll tracking and animations work
+unchanged — only the text (and a few icons) differ. To add a third story, copy
+`AI_CONTENT`'s shape and add an entry to the `MODES` array.
