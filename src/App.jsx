@@ -936,20 +936,31 @@ export function GlobalStyles() {
 // built-in flowchart mark below.
 export const LOGO = { src: null };
 
-export function Logo({ size = 26 }) {
+// The "mats." logo: a bracket with an arrow, plus the wordmark. It's drawn as
+// pure vector (the letters are outlines, so no web font is needed and it stays
+// sharp at any size). `size` is the height in px. Use `markOnly` for just the
+// bracket-and-arrow symbol (used in the admin).
+const LOGO_BRACKET = "M0,3 H6 V5.7 H2.7 V24.3 H6 V27 H0 Z";
+const LOGO_ARROW = "M6.4,15 H18.8 M13.6,10 L18.8,15 L13.6,20";
+const LOGO_WORDMARK = "M33.9 21.5V8.5H36.97L37.26 10.23Q37.87 9.3 38.89 8.75Q39.91 8.19 41.23 8.19Q42.21 8.19 42.98 8.45Q43.76 8.71 44.36 9.2Q44.97 9.69 45.35 10.43Q46.08 9.38 47.24 8.78Q48.4 8.19 49.77 8.19Q51.47 8.19 52.6 8.87Q53.74 9.56 54.32 10.85Q54.9 12.14 54.9 14.02V21.5H51.44V14.33Q51.44 12.78 50.84 11.96Q50.23 11.13 48.97 11.13Q48.14 11.13 47.5 11.54Q46.85 11.96 46.5 12.73Q46.15 13.5 46.15 14.59V21.5H42.67V14.33Q42.67 12.78 42.05 11.96Q41.43 11.13 40.14 11.13Q39.34 11.13 38.71 11.54Q38.08 11.96 37.73 12.73Q37.38 13.5 37.38 14.59V21.5ZM62.2 21.81Q60.57 21.81 59.52 21.28Q58.46 20.75 57.95 19.86Q57.45 18.97 57.45 17.89Q57.45 16.7 58.06 15.8Q58.66 14.9 59.89 14.38Q61.11 13.87 62.97 13.87H66.2Q66.2 12.91 65.94 12.28Q65.68 11.65 65.14 11.34Q64.6 11.03 63.69 11.03Q62.71 11.03 62.03 11.45Q61.35 11.88 61.19 12.76H57.81Q57.94 11.36 58.73 10.34Q59.52 9.33 60.82 8.76Q62.12 8.19 63.72 8.19Q65.55 8.19 66.89 8.81Q68.23 9.43 68.96 10.59Q69.68 11.75 69.68 13.45V21.5H66.74L66.35 19.51Q66.07 20.03 65.68 20.44Q65.29 20.86 64.78 21.16Q64.26 21.47 63.62 21.64Q62.97 21.81 62.2 21.81ZM63.02 19.13Q63.69 19.13 64.22 18.88Q64.75 18.64 65.14 18.21Q65.53 17.79 65.74 17.23Q65.96 16.68 66.04 16.03V16.01H63.38Q62.58 16.01 62.08 16.2Q61.58 16.39 61.35 16.75Q61.11 17.12 61.11 17.58Q61.11 18.1 61.35 18.43Q61.58 18.77 62.02 18.95Q62.46 19.13 63.02 19.13ZM78.42 21.5Q77.06 21.5 76.04 21.07Q75.02 20.65 74.45 19.66Q73.88 18.66 73.88 16.93V11.41H71.66V8.5H73.88L74.27 4.97H77.36V8.5H80.8V11.41H77.36V16.99Q77.36 17.86 77.75 18.2Q78.14 18.53 79.07 18.53H80.77V21.5ZM88.69 21.81Q86.91 21.81 85.59 21.24Q84.28 20.67 83.53 19.67Q82.78 18.66 82.68 17.4H86.13Q86.26 17.89 86.57 18.29Q86.88 18.69 87.4 18.92Q87.91 19.15 88.64 19.15Q89.33 19.15 89.77 18.96Q90.21 18.77 90.43 18.43Q90.65 18.1 90.65 17.73Q90.65 17.19 90.34 16.9Q90.03 16.6 89.44 16.42Q88.84 16.24 87.99 16.06Q87.06 15.88 86.17 15.61Q85.28 15.34 84.59 14.92Q83.89 14.51 83.48 13.87Q83.07 13.22 83.07 12.27Q83.07 11.11 83.68 10.19Q84.3 9.27 85.49 8.73Q86.68 8.19 88.35 8.19Q90.7 8.19 92.07 9.25Q93.43 10.31 93.69 12.16H90.42Q90.26 11.57 89.73 11.22Q89.2 10.87 88.33 10.87Q87.4 10.87 86.91 11.21Q86.42 11.54 86.42 12.09Q86.42 12.45 86.74 12.73Q87.06 13.01 87.66 13.21Q88.25 13.4 89.1 13.58Q90.6 13.89 91.73 14.29Q92.87 14.69 93.51 15.43Q94.16 16.16 94.16 17.55Q94.16 18.79 93.49 19.76Q92.82 20.73 91.59 21.27Q90.36 21.81 88.69 21.81Z";
+const LOGO_WIDTH = 100.2;
+const LOGO_MARK_WIDTH = 20.2;
+
+export function Logo({ size = 28, markOnly = false }) {
   if (LOGO.src) {
-    return <img src={`${import.meta.env.BASE_URL}${LOGO.src}`} alt="" width={size} height={size} style={{ display: "block", objectFit: "contain" }} />;
+    return <img src={`${import.meta.env.BASE_URL}${LOGO.src}`} alt="" style={{ display: "block", height: size, width: "auto" }} />;
   }
-  // A trigger node branching into two connected process nodes — a small,
-  // literal flowchart glyph, monochrome in THEME.primary. Swap this component
-  // any time for a different logo; it's only referenced from the brand link
-  // in TopNav (here) and the header of AboutSection / ContactSection.
+  const w = markOnly ? LOGO_MARK_WIDTH : LOGO_WIDTH;
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect x="9" y="1" width="6" height="6" rx="1.2" fill={THEME.primary} />
-      <rect x="1" y="15" width="6" height="6" rx="1.2" stroke={THEME.primary} strokeWidth="1.6" />
-      <rect x="17" y="15" width="6" height="6" rx="1.2" stroke={THEME.primary} strokeWidth="1.6" />
-      <path d="M12 7V11M4 11H20M4 11V15M20 11V15" stroke={THEME.primary} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width={(size * w) / 30} height={size} viewBox={`0 0 ${w} 30`} fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="mats." style={{ display: "block" }}>
+      <path d={LOGO_BRACKET} fill={THEME.primary} />
+      <path d={LOGO_ARROW} stroke={THEME.primary} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" />
+      {!markOnly && (
+        <>
+          <path d={LOGO_WORDMARK} fill={THEME.ink} />
+          <circle cx="97.93" cy="19.5" r="2.0" fill={THEME.primary} />
+        </>
+      )}
     </svg>
   );
 }
@@ -1579,9 +1590,8 @@ function TopNav({ activeId, t, mode, setMode }) {
   return (
     <header className="rpa-nav">
       <div className="rpa-nav-bar">
-        <a className="rpa-brand" href="#home" onClick={(e) => scrollToSection(e, "home")}>
-          <Logo size={24} />
-          {t.name}
+        <a className="rpa-brand" href="#home" aria-label={t.name} onClick={(e) => scrollToSection(e, "home")}>
+          <Logo size={28} />
         </a>
         <button className="rpa-nav-toggle" onClick={() => setOpen((o) => !o)} aria-label="Toggle navigation">
           {open ? <X size={22} /> : <Menu size={22} />}
@@ -1746,7 +1756,7 @@ function AboutSection() {
       <GlobalStyles />
       <header className="rpa-nav">
         <div className="rpa-nav-bar">
-          <Link className="rpa-brand" to="/"><Logo size={22} />{t.name}</Link>
+          <Link className="rpa-brand" to="/" aria-label={t.name}><Logo size={26} /></Link>
           <nav className="rpa-nav-links" style={{ display: "flex" }}>
             <Link to="/">Home</Link>
             <Link to="/about" className="active">{t.navAbout}</Link>
@@ -1840,7 +1850,7 @@ function ContactSection() {
       <GlobalStyles />
       <header className="rpa-nav">
         <div className="rpa-nav-bar">
-          <Link className="rpa-brand" to="/"><Logo size={22} />{t.name}</Link>
+          <Link className="rpa-brand" to="/" aria-label={t.name}><Logo size={26} /></Link>
           <nav className="rpa-nav-links" style={{ display: "flex" }}>
             <Link to="/">Home</Link>
             <Link to="/about">{t.navAbout}</Link>
@@ -2156,7 +2166,7 @@ function AdminSection() {
         <GlobalStyles />
         <AdminStyles />
         <div className="adm-gate-box">
-          <Logo size={30} />
+          <Logo size={30} markOnly />
           <h1 className="rpa-h" style={{ marginTop: 14 }}>Admin</h1>
           <p>Enter the admin passphrase to continue.</p>
           <input
@@ -2181,7 +2191,7 @@ function AdminSection() {
       <AdminStyles />
       <header className="rpa-nav">
         <div className="rpa-nav-bar">
-          <Link className="rpa-brand" to="/"><Logo size={22} />Admin</Link>
+          <Link className="rpa-brand" to="/"><Logo size={22} markOnly />Admin</Link>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <select value={mode} onChange={(e) => setMode(e.target.value)} style={{ fontFamily: "'JetBrains Mono', monospace", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--rpa-line)" }}>
               {MODES.map((m) => <option key={m.code} value={m.code}>{m.label}</option>)}
