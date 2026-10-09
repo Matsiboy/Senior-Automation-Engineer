@@ -1,31 +1,34 @@
 // =====================================================================================
-// App.jsx — the WHOLE site: one-page RPA lifecycle journey (Identify → Improve),
-// the About/Contact subpages, and the /admin content editor. Everything lives in
+// App.jsx — the WHOLE site: a one-page eight-stage journey that can be told two ways
+// (RPA or Agentic AI, switched with the toggle in the nav), the About/Contact
+// subpages, and the /admin content editor. Everything lives in
 // this single file on purpose — after initial setup, updating the site is just
 // re-uploading this one file (main.jsx, index.html, vite.config.js etc. are one-time
 // scaffolding you shouldn't need to touch again).
 //
 // EVERYTHING you'd normally touch lives in the CONFIG block below:
 //   THEME       — the two-color palette + derived tones
-//   STAGE_META  — structural, language-independent stage data (id + icon, in order)
-//   CONTENT     — ALL text, in both languages: CONTENT.en / CONTENT.no. This is the
-//                 one place to edit copy, and the one place to add a third language.
+//   STAGE_META  — structural stage data shared by both stories (id + icon, in order)
+//   CONTENT     — ALL text, for both stories: CONTENT.rpa / CONTENT.ai. This is the
+//                 one place to edit copy.
 //
 // TO ADD A SECTION to any stage (or to About/Contact), push another {heading, body}
-// object into that stage's `blocks` array — in BOTH CONTENT.en and CONTENT.no — or
+// object into that stage's `blocks` array — in RPA_CONTENT and/or AI_CONTENT — or
 // into about.sections / contact.sections. Nothing else needs to change. Easier: use
 // the /admin panel, which edits and saves this same data (see the ADMIN section below).
 //
-// TO ADD A LANGUAGE: add a new key to CONTENT (copy the "en" shape), and add it to
-// the LANGUAGES array below so its flag shows up in the switcher.
+// TO ADD A THIRD STORY: add a block to CONTENT (copy AI_CONTENT's shape) and add it
+// to the MODES array below so it shows up in the toggle.
+//
+// LOGO: set LOGO.src (next to the Logo component) to a file in /public.
 //
 // FIREBASE: set FIREBASE_ENABLED to true and fill in firebaseConfig once you've
 // created a project — see README.md. Content then syncs live via Firestore
-// (collection "siteContent", one doc per language) instead of just this browser's
+// (collection "siteContent", one doc per story) instead of just this browser's
 // localStorage.
 //
 // STRUCTURE OF THIS FILE, top to bottom:
-//   1. Config: THEME, LANGUAGES, STAGE_META, CONTENT
+//   1. Config: THEME, MODES, STAGE_META, CONTENT
 //   2. Content persistence: useSiteContent / saveSiteContent / resetSiteContent
 //   3. Shared UI: GlobalStyles, Logo, nav, progress rail, scroll helpers
 //   4. HomeSection   — the "/" one-page journey
@@ -40,7 +43,7 @@ import { Link, Routes, Route } from "react-router-dom";
 import {
   Search, ClipboardList, Compass, Code2, FlaskConical, Rocket, Activity,
   TrendingUp, Menu, X, ArrowUpRight, Mail, Github, Linkedin,
-  FileText, MessageSquare, BarChart3, Target, Check, Plug, Terminal, Bot, Bell, RefreshCw,
+  FileText, MessageSquare, BarChart3, Target, Check, Plug, Terminal, Bot, Bell, RefreshCw, Wrench, Network,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -72,13 +75,17 @@ export const THEME = {
 };
 
 // ---------------------------------------------------------------------------
-// LANGUAGES — order controls the order the flags render in
+// MODES — the two stories the site can tell. The toggle in the nav switches
+// between them; each has its own block in CONTENT (same shape).
 // ---------------------------------------------------------------------------
-export const LANGUAGES = [
-  { code: "en", flag: "🇬🇧", label: "English" },
-  { code: "no", flag: "🇳🇴", label: "Norsk" },
+export const MODES = [
+  { code: "rpa", label: "RPA" },
+  { code: "ai", label: "Agentic AI" },
 ];
-export const LANG_STORAGE_KEY = "site-lang";
+export const MODE_STORAGE_KEY = "site-mode";
+// RPA keeps using the old "en" storage id (Firestore doc + localStorage key),
+// so anything you saved in /admin before this switch still loads.
+const storageId = (mode) => (mode === "rpa" ? "en" : mode);
 
 // ---------------------------------------------------------------------------
 // STAGE_META — structural only (id + icon + order). Text lives in CONTENT.
@@ -95,481 +102,445 @@ export const STAGE_META = [
 ];
 
 // ---------------------------------------------------------------------------
-// CONTENT — every string on the site, per language. This is the file's single
-// source of truth for copy.
+// CONTENT — every string on the site, for both stories (RPA and Agentic AI).
+// This is the file's single source of truth for copy. RPA_CONTENT is the
+// original story; AI_CONTENT (below it) copies it and overrides what differs.
 // ---------------------------------------------------------------------------
-export const CONTENT = {
-  // ================================================================= ENGLISH
-  en: {
-    name: "Mats Østvig",
-    role: "Senior Automation Engineer",
-    tagline: "I run every automation through the same eight stages — from spotting the problem to proving the hours it saved.",
-    heroLede: "Every engagement runs through the same eight-stage lifecycle below — scroll to walk through it, or jump straight to a stage from the menu.",
-    ctaStart: "Start a conversation",
-    ctaProcess: "See the process",
-    navNews: "News",
-    navProjects: "Projects",
-    navAbout: "About",
-    navContact: "Contact",
-    socials: { email: "mats.ostvig@example.com", github: "https://github.com/", linkedin: "https://linkedin.com/" },
-    stages: {
-      identify: {
-        title: "Identify", kicker: "STAGE 01 / 08",
-        summary: "Find the workflows that are actually worth automating — high frequency, rule-based, and painful enough that people already want it gone.",
-        blocks: [
-          { heading: "Where candidates come from", body: "Shadowing sessions, team interviews, and time-tracking data surface repetitive work before it's ever formally requested." },
-          { heading: "What disqualifies a process", body: "Low frequency, constantly-changing rules, or heavy judgment calls — those stay manual, or get redesigned first." },
-        ],
-      },
-      assess: {
-        title: "Assess", kicker: "STAGE 02 / 08",
-        summary: "Score each candidate on effort, risk, and expected time saved, so the roadmap is ranked by return — not by whoever asked loudest.",
-        blocks: [
-          { heading: "Scoring model", body: "Volume × minutes saved per run, weighed against build complexity and system stability." },
-          { heading: "Stakeholder sign-off", body: "Nothing enters the build queue without the process owner agreeing on the target outcome." },
-        ],
-      },
-      design: {
-        title: "Design", kicker: "STAGE 03 / 08",
-        summary: "Map the process end to end — including exceptions — before a single line of automation gets built.",
-        blocks: [
-          { heading: "Swimlane maps", body: "Every actor, decision point, and handoff, drawn in BPMN 2.0 and validated by the people who do the work." },
-          { heading: "Exception paths", body: "The edge cases get designed on purpose, not discovered in production." },
-        ],
-      },
-      develop: {
-        title: "Develop", kicker: "STAGE 04 / 08",
-        summary: "Build with the simplest reliable tool — an API integration, a scheduled script, or an RPA bot when the system leaves no other way in.",
-        blocks: [
-          { heading: "Tool selection", body: "APIs first, scripts for data movement, RPA only for closed systems with no programmatic access." },
-          { heading: "Built-in fallbacks", body: "Anything the automation can't confidently resolve routes to a human — never silently dropped." },
-        ],
-      },
-      test: {
-        title: "Test", kicker: "STAGE 05 / 08",
-        summary: "Run it against real historical data and real edge cases before it ever touches production.",
-        blocks: [
-          { heading: "Parallel run", body: "The automation runs alongside the manual process for a cycle, and outputs are diffed line by line." },
-          { heading: "Failure injection", body: "Bad data, timeouts, and missing fields are tested on purpose, not hoped against." },
-        ],
-      },
-      deploy: {
-        title: "Deploy", kicker: "STAGE 06 / 08",
-        summary: "Ship with a rollback plan, clear ownership, and a handoff the team can actually maintain.",
-        blocks: [
-          { heading: "Staged rollout", body: "New automations run in shadow mode, then on a subset of cases, before taking the full load." },
-          { heading: "Documentation & handoff", body: "Plain-language run logs and a walkthrough session, so the automation survives me moving on." },
-        ],
-      },
-      monitor: {
-        title: "Monitor", kicker: "STAGE 07 / 08",
-        summary: "Every automation reports what it did, so drift and failures surface in days, not months.",
-        blocks: [
-          { heading: "Health dashboards", body: "Run counts, exception rates, and time saved, tracked per automation and reviewed monthly." },
-          { heading: "Alerting", body: "Failures page a human immediately — automation should never fail silently." },
-        ],
-      },
-      improve: {
-        title: "Improve", kicker: "STAGE 08 / 08",
-        summary: "Re-measure against the original baseline, then feed what's learned back into the next Identify pass.",
-        blocks: [
-          { heading: "Baseline vs. actual", body: "The 30/90-day numbers get compared against the original estimate, in public, on the dashboard." },
-          { heading: "Back to stage one", body: "Every improve cycle surfaces the next candidate — the loop is the point." },
-        ],
-      },
-    },
-    news: {
-      kicker: "LATEST", heading: "News",
-      items: [
-        { id: "n1", date: "2026-08", title: "Cut invoice matching from 27 hrs/week to under 1", body: "New bot handles matching across two legacy systems with no shared API." },
-        { id: "n2", date: "2026-05", title: "Speaking at OpsAutomate Summit", body: "A talk on measuring automation ROI honestly, not optimistically." },
+const RPA_CONTENT = {
+  name: "Mats Østvig",
+  role: "Senior Automation Engineer",
+  tagline: "I run every automation through the same eight stages — from spotting the problem to proving the hours it saved.",
+  heroLede: "Every engagement runs through the same eight-stage lifecycle below — scroll to walk through it, or jump straight to a stage from the menu.",
+  ctaStart: "Start a conversation",
+  ctaProcess: "See the process",
+  navNews: "News",
+  navProjects: "Projects",
+  navAbout: "About",
+  navContact: "Contact",
+  socials: { email: "mats.ostvig@example.com", github: "https://github.com/", linkedin: "https://linkedin.com/" },
+  stages: {
+    identify: {
+      title: "Identify", kicker: "STAGE 01 / 08",
+      summary: "Find the workflows that are actually worth automating — high frequency, rule-based, and painful enough that people already want it gone.",
+      blocks: [
+        { heading: "Where candidates come from", body: "Shadowing sessions, team interviews, and time-tracking data surface repetitive work before it's ever formally requested." },
+        { heading: "What disqualifies a process", body: "Low frequency, constantly-changing rules, or heavy judgment calls — those stay manual, or get redesigned first." },
       ],
     },
-    projects: {
-      kicker: "SELECTED WORK", heading: "Projects",
-      items: [
-        { id: "p1", tag: "RPA", title: "Invoice matching bot", body: "UiPath bot matching invoices to purchase orders across two legacy systems." },
-        { id: "p2", tag: "Script", title: "Shipment reconciliation pipeline", body: "Scheduled Python job replacing a 14-hour/week manual spreadsheet process." },
-        { id: "p3", tag: "Integration", title: "Expense approval routing", body: "Power Automate flow cutting average approval time from 6 days to 9 hours." },
+    assess: {
+      title: "Assess", kicker: "STAGE 02 / 08",
+      summary: "Score each candidate on effort, risk, and expected time saved, so the roadmap is ranked by return — not by whoever asked loudest.",
+      blocks: [
+        { heading: "Scoring model", body: "Volume × minutes saved per run, weighed against build complexity and system stability." },
+        { heading: "Stakeholder sign-off", body: "Nothing enters the build queue without the process owner agreeing on the target outcome." },
       ],
     },
-    ctaBand: {
-      heading: "Have a process that's outgrown your team's patience?",
-      body: "Send a short description of the workflow — I'll tell you honestly whether it's worth automating.",
-      button: "Get in touch",
-    },
-    about: {
-      kicker: "ABOUT",
-      heading: "Operations background, engineering habits.",
-      intro: "Nine years moving from running an operations desk to building the systems that replaced the slow parts of it.",
-      sections: [
-        { heading: "2023 — Now · Senior Automation Engineer, Northgate Financial Services", body: "Own the automation roadmap for finance operations: AP/AR processing, reconciliation, and reporting, with a standing time-savings dashboard reviewed monthly by ops leadership." },
-        { heading: "2020 — 2023 · Process Automation Engineer, Harrow Logistics Group", body: "Led process discovery across warehousing and dispatch, translating floor-level workflows into automations that cut manual reconciliation from 14 hours/week to under 1." },
-        { heading: "2017 — 2020 · Business Process Analyst, Corvin & Wade Consulting", body: "Mapped and redesigned back-office processes for mid-market clients — and learned that a process map nobody recognizes is worse than no map at all." },
-        { heading: "Certifications", body: "UiPath Advanced RPA Developer · Lean Six Sigma Green Belt · Microsoft Power Platform Fundamentals." },
-      ],
-      skillsHeading: "TOOLBELT",
-      skills: ["UiPath", "Power Automate", "Python", "SQL", "BPMN 2.0", "REST APIs", "Azure Logic Apps", "Power BI"],
-      ctaHeading: "Want the long version?",
-      ctaBody: "Happy to walk through specific projects and what I'd have done differently.",
-      ctaButton: "Get in touch",
-    },
-    contact: {
-      kicker: "CONTACT",
-      heading: "Tell me about the process that's slowing you down.",
-      intro: "A few sentences on the task, how often it happens, and who's stuck doing it is plenty to start with.",
-      formEndpoint: "",
-      sections: [
-        { heading: "Email", body: "mats.ostvig@example.com" },
-        { heading: "LinkedIn", body: "linkedin.com/in/matsostvig" },
-        { heading: "Based in", body: "Remote — open to on-site engagements" },
-      ],
-      form: {
-        name: "Name", email: "Email", message: "What process are we talking about?",
-        submit: "Send message", sending: "Sending…",
-        sent: "Thanks — I'll be in touch.", error: "Something went wrong — email me directly instead.",
-      },
-    },
-    identifyDemo: {
-      label: "WORKFLOW DISCOVERY",
-      scanning: "Scanning workflow…",
-      complete: "Scan complete",
-      pending: "Review pending",
-      candidate: "Automate",
-      skip: "Keep manual",
-      summaryCandidate: "to automate",
-      summarySkip: "stay manual",
-      cards: [
-        { title: "Invoice entry", sub: "Finance workflow", freq: "Daily", attrs: ["High frequency", "Rule-based", "Structured data"] },
-        { title: "Customer escalation", sub: "Support workflow", freq: "Daily", attrs: ["Varies", "Judgment calls", "Many exceptions"] },
-        { title: "Report consolidation", sub: "Operations workflow", freq: "Daily", attrs: ["High frequency", "Repeatable steps", "Stable rules"] },
-        { title: "Annual strategy review", sub: "Leadership workflow", freq: "Yearly", attrs: ["Low frequency", "Changing rules", "Open-ended"] },
+    design: {
+      title: "Design", kicker: "STAGE 03 / 08",
+      summary: "Map the process end to end — including exceptions — before a single line of automation gets built.",
+      blocks: [
+        { heading: "Swimlane maps", body: "Every actor, decision point, and handoff, drawn in BPMN 2.0 and validated by the people who do the work." },
+        { heading: "Exception paths", body: "The edge cases get designed on purpose, not discovered in production." },
       ],
     },
-    assessDemo: {
-      label: "ASSESSMENT",
-      cols: ["Time saved", "Effort", "Risk"],
-      scoring: "Scoring candidates…",
-      ranked: "Ranked by return",
-      top: "Build first",
-      chips: ["Volume × time saved", "Build complexity", "System stability"],
-      rows: ["Expense approvals", "Invoice matching", "Report consolidation"],
-    },
-    designDemo: {
-      label: "PROCESS MAP",
-      mapping: "Mapping process…",
-      mapped: "Map complete — exceptions included",
-      lanes: ["AUTOMATION", "HUMAN"],
-      nodes: ["Receive", "Validate", "Match?", "Post", "Human review"],
-      yes: "yes",
-      no: "no",
-      chips: ["5 steps", "1 decision", "1 exception path"],
-    },
-    developDemo: {
-      label: "TOOL SELECTION",
-      situation: "Situation",
-      scenarios: ["The system has an API", "It's just moving data on a schedule", "Closed system, no API"],
-      tools: [
-        { name: "API integration", rank: "1st choice" },
-        { name: "Scheduled script", rank: "2nd choice" },
-        { name: "RPA bot", rank: "Last resort" },
+    develop: {
+      title: "Develop", kicker: "STAGE 04 / 08",
+      summary: "Build with the simplest reliable tool — an API integration, a scheduled script, or an RPA bot when the system leaves no other way in.",
+      blocks: [
+        { heading: "Tool selection", body: "APIs first, scripts for data movement, RPA only for closed systems with no programmatic access." },
+        { heading: "Built-in fallbacks", body: "Anything the automation can't confidently resolve routes to a human — never silently dropped." },
       ],
-      choosing: "Picking the simplest reliable tool…",
-      done: "Simplest reliable tool wins",
-      summary: "Simplest reliable tool first",
-      chips: ["APIs first", "Scripts for data", "RPA last"],
     },
-    testDemo: {
-      label: "PARALLEL RUN",
-      cols: ["Record", "Manual", "Automation"],
-      running: "Comparing results…",
-      passed: "All results match",
-      chips: ["Bad data caught", "Timeout handled", "Missing field handled"],
+    test: {
+      title: "Test", kicker: "STAGE 05 / 08",
+      summary: "Run it against real historical data and real edge cases before it ever touches production.",
+      blocks: [
+        { heading: "Parallel run", body: "The automation runs alongside the manual process for a cycle, and outputs are diffed line by line." },
+        { heading: "Failure injection", body: "Bad data, timeouts, and missing fields are tested on purpose, not hoped against." },
+      ],
     },
-    deployDemo: {
-      label: "ROLLOUT",
-      stages: ["Shadow mode", "Subset of cases", "Full load"],
-      bar: "Cases handled by automation",
-      rolling: "Rolling out…",
-      done: "Live and handed over",
-      rollback: "Rollback plan ready",
-      handoff: "Handoff docs & walkthrough",
-      chips: ["Rollback plan", "Clear ownership", "Handoff"],
+    deploy: {
+      title: "Deploy", kicker: "STAGE 06 / 08",
+      summary: "Ship with a rollback plan, clear ownership, and a handoff the team can actually maintain.",
+      blocks: [
+        { heading: "Staged rollout", body: "New automations run in shadow mode, then on a subset of cases, before taking the full load." },
+        { heading: "Documentation & handoff", body: "Plain-language run logs and a walkthrough session, so the automation survives me moving on." },
+      ],
     },
-    monitorDemo: {
-      label: "LIVE DASHBOARD",
-      kpis: ["Runs", "Exceptions", "Hours saved"],
-      healthy: "All runs healthy",
-      alert: "Failure detected — human alerted",
-      resolved: "Resolved — back to normal",
-      monitoring: "Monitoring runs…",
-      watching: "Monitoring continues",
-      chips: ["Run counts", "Exception rate", "Time saved"],
+    monitor: {
+      title: "Monitor", kicker: "STAGE 07 / 08",
+      summary: "Every automation reports what it did, so drift and failures surface in days, not months.",
+      blocks: [
+        { heading: "Health dashboards", body: "Run counts, exception rates, and time saved, tracked per automation and reviewed monthly." },
+        { heading: "Alerting", body: "Failures page a human immediately — automation should never fail silently." },
+      ],
     },
-    improveDemo: {
-      label: "RE-MEASURE",
-      baseline: { label: "Baseline estimate", value: "160 h/week" },
-      measured: { label: "Measured at 90 days", value: "216 h/week" },
-      delta: "+35% vs. estimate",
-      measuring: "Re-measuring…",
-      done: "Fed back into the next cycle",
-      next: { tag: "NEW CANDIDATE", title: "Expense approvals", sub: "Back to Identify" },
-      chips: ["Re-measure", "Compare to baseline", "Feed back"],
+    improve: {
+      title: "Improve", kicker: "STAGE 08 / 08",
+      summary: "Re-measure against the original baseline, then feed what's learned back into the next Identify pass.",
+      blocks: [
+        { heading: "Baseline vs. actual", body: "The 30/90-day numbers get compared against the original estimate, in public, on the dashboard." },
+        { heading: "Back to stage one", body: "Every improve cycle surfaces the next candidate — the loop is the point." },
+      ],
     },
-    footer: { backHome: "← Back home" },
   },
+  news: {
+    kicker: "LATEST", heading: "News",
+    items: [
+      { id: "n1", date: "2026-08", title: "Cut invoice matching from 27 hrs/week to under 1", body: "New bot handles matching across two legacy systems with no shared API." },
+      { id: "n2", date: "2026-05", title: "Speaking at OpsAutomate Summit", body: "A talk on measuring automation ROI honestly, not optimistically." },
+    ],
+  },
+  projects: {
+    kicker: "SELECTED WORK", heading: "Projects",
+    items: [
+      { id: "p1", tag: "RPA", title: "Invoice matching bot", body: "UiPath bot matching invoices to purchase orders across two legacy systems." },
+      { id: "p2", tag: "Script", title: "Shipment reconciliation pipeline", body: "Scheduled Python job replacing a 14-hour/week manual spreadsheet process." },
+      { id: "p3", tag: "Integration", title: "Expense approval routing", body: "Power Automate flow cutting average approval time from 6 days to 9 hours." },
+    ],
+  },
+  ctaBand: {
+    heading: "Have a process that's outgrown your team's patience?",
+    body: "Send a short description of the workflow — I'll tell you honestly whether it's worth automating.",
+    button: "Get in touch",
+  },
+  about: {
+    kicker: "ABOUT",
+    heading: "Operations background, engineering habits.",
+    intro: "Nine years moving from running an operations desk to building the systems that replaced the slow parts of it.",
+    sections: [
+      { heading: "2023 — Now · Senior Automation Engineer, Northgate Financial Services", body: "Own the automation roadmap for finance operations: AP/AR processing, reconciliation, and reporting, with a standing time-savings dashboard reviewed monthly by ops leadership." },
+      { heading: "2020 — 2023 · Process Automation Engineer, Harrow Logistics Group", body: "Led process discovery across warehousing and dispatch, translating floor-level workflows into automations that cut manual reconciliation from 14 hours/week to under 1." },
+      { heading: "2017 — 2020 · Business Process Analyst, Corvin & Wade Consulting", body: "Mapped and redesigned back-office processes for mid-market clients — and learned that a process map nobody recognizes is worse than no map at all." },
+      { heading: "Certifications", body: "UiPath Advanced RPA Developer · Lean Six Sigma Green Belt · Microsoft Power Platform Fundamentals." },
+    ],
+    skillsHeading: "TOOLBELT",
+    skills: ["UiPath", "Power Automate", "Python", "SQL", "BPMN 2.0", "REST APIs", "Azure Logic Apps", "Power BI"],
+    ctaHeading: "Want the long version?",
+    ctaBody: "Happy to walk through specific projects and what I'd have done differently.",
+    ctaButton: "Get in touch",
+  },
+  contact: {
+    kicker: "CONTACT",
+    heading: "Tell me about the process that's slowing you down.",
+    intro: "A few sentences on the task, how often it happens, and who's stuck doing it is plenty to start with.",
+    formEndpoint: "",
+    sections: [
+      { heading: "Email", body: "mats.ostvig@example.com" },
+      { heading: "LinkedIn", body: "linkedin.com/in/matsostvig" },
+      { heading: "Based in", body: "Remote — open to on-site engagements" },
+    ],
+    form: {
+      name: "Name", email: "Email", message: "What process are we talking about?",
+      submit: "Send message", sending: "Sending…",
+      sent: "Thanks — I'll be in touch.", error: "Something went wrong — email me directly instead.",
+    },
+  },
+  identifyDemo: {
+    label: "WORKFLOW DISCOVERY",
+    scanning: "Scanning workflow…",
+    complete: "Scan complete",
+    pending: "Review pending",
+    candidate: "Automate",
+    skip: "Keep manual",
+    summaryCandidate: "to automate",
+    summarySkip: "stay manual",
+    cards: [
+      { title: "Invoice entry", sub: "Finance workflow", freq: "Daily", attrs: ["High frequency", "Rule-based", "Structured data"] },
+      { title: "Customer escalation", sub: "Support workflow", freq: "Daily", attrs: ["Varies", "Judgment calls", "Many exceptions"] },
+      { title: "Report consolidation", sub: "Operations workflow", freq: "Daily", attrs: ["High frequency", "Repeatable steps", "Stable rules"] },
+      { title: "Annual strategy review", sub: "Leadership workflow", freq: "Yearly", attrs: ["Low frequency", "Changing rules", "Open-ended"] },
+    ],
+  },
+  assessDemo: {
+    label: "ASSESSMENT",
+    cols: ["Time saved", "Effort", "Risk"],
+    scoring: "Scoring candidates…",
+    ranked: "Ranked by return",
+    top: "Build first",
+    chips: ["Volume × time saved", "Build complexity", "System stability"],
+    rows: ["Expense approvals", "Invoice matching", "Report consolidation"],
+  },
+  designDemo: {
+    label: "PROCESS MAP",
+    mapping: "Mapping process…",
+    mapped: "Map complete — exceptions included",
+    lanes: ["AUTOMATION", "HUMAN"],
+    nodes: ["Receive", "Validate", "Match?", "Post", "Human review"],
+    yes: "yes",
+    no: "no",
+    chips: ["5 steps", "1 decision", "1 exception path"],
+  },
+  developDemo: {
+    label: "TOOL SELECTION",
+    situation: "Situation",
+    scenarios: ["The system has an API", "It's just moving data on a schedule", "Closed system, no API"],
+    tools: [
+      { name: "API integration", rank: "1st choice" },
+      { name: "Scheduled script", rank: "2nd choice" },
+      { name: "RPA bot", rank: "Last resort" },
+    ],
+    choosing: "Picking the simplest reliable tool…",
+    done: "Simplest reliable tool wins",
+    summary: "Simplest reliable tool first",
+    chips: ["APIs first", "Scripts for data", "RPA last"],
+  },
+  testDemo: {
+    label: "PARALLEL RUN",
+    cols: ["Record", "Manual", "Automation"],
+    running: "Comparing results…",
+    passed: "All results match",
+    chips: ["Bad data caught", "Timeout handled", "Missing field handled"],
+  },
+  deployDemo: {
+    label: "ROLLOUT",
+    stages: ["Shadow mode", "Subset of cases", "Full load"],
+    bar: "Cases handled by automation",
+    rolling: "Rolling out…",
+    done: "Live and handed over",
+    rollback: "Rollback plan ready",
+    handoff: "Handoff docs & walkthrough",
+    chips: ["Rollback plan", "Clear ownership", "Handoff"],
+  },
+  monitorDemo: {
+    label: "LIVE DASHBOARD",
+    kpis: ["Runs", "Exceptions", "Hours saved"],
+    healthy: "All runs healthy",
+    alert: "Failure detected — human alerted",
+    resolved: "Resolved — back to normal",
+    monitoring: "Monitoring runs…",
+    watching: "Monitoring continues",
+    chips: ["Run counts", "Exception rate", "Time saved"],
+  },
+  improveDemo: {
+    label: "RE-MEASURE",
+    baseline: { label: "Baseline estimate", value: "160 h/week" },
+    measured: { label: "Measured at 90 days", value: "216 h/week" },
+    delta: "+35% vs. estimate",
+    measuring: "Re-measuring…",
+    done: "Fed back into the next cycle",
+    next: { tag: "NEW CANDIDATE", title: "Expense approvals", sub: "Back to Identify" },
+    chips: ["Re-measure", "Compare to baseline", "Feed back"],
+  },
+  footer: { backHome: "← Back home" },
+};
 
-  // =============================================================== NORWEGIAN
-  no: {
-    name: "Mats Østvig",
-    role: "Senior automasjonsingeniør",
-    tagline: "Jeg kjører hver automatisering gjennom de samme åtte trinnene — fra å oppdage problemet til å bevise timene den sparte.",
-    heroLede: "Hvert oppdrag følger den samme åtte-trinns livssyklusen under — scroll deg gjennom den, eller hopp rett til et trinn fra menyen.",
-    ctaStart: "Start en samtale",
-    ctaProcess: "Se prosessen",
-    navNews: "Nyheter",
-    navProjects: "Prosjekter",
-    navAbout: "Om meg",
-    navContact: "Kontakt",
-    socials: { email: "mats.ostvig@example.com", github: "https://github.com/", linkedin: "https://linkedin.com/" },
-    stages: {
-      identify: {
-        title: "Identifiser", kicker: "TRINN 01 / 08",
-        summary: "Finn arbeidsflytene som faktisk er verdt å automatisere — høy frekvens, regelbaserte, og plagsomme nok til at folk allerede vil bli kvitt dem.",
-        blocks: [
-          { heading: "Hvor kandidatene kommer fra", body: "Skyggelegging av arbeidsdagen, teamintervjuer og tidsregistreringsdata avdekker repeterende arbeid før det noen gang blir formelt etterspurt." },
-          { heading: "Hva som diskvalifiserer en prosess", body: "Lav frekvens, stadig skiftende regler, eller mye skjønnsutøvelse — disse forblir manuelle, eller blir redesignet først." },
-        ],
-      },
-      assess: {
-        title: "Vurder", kicker: "TRINN 02 / 08",
-        summary: "Vurder hver kandidat på innsats, risiko og forventet tidsbesparelse, slik at veikartet rangeres etter avkastning — ikke etter hvem som ropte høyest.",
-        blocks: [
-          { heading: "Vurderingsmodell", body: "Volum × minutter spart per kjøring, veid mot byggekompleksitet og systemstabilitet." },
-          { heading: "Godkjenning fra interessenter", body: "Ingenting går inn i byggekøen uten at prosesseieren er enig i målresultatet." },
-        ],
-      },
-      design: {
-        title: "Design", kicker: "TRINN 03 / 08",
-        summary: "Kartlegg prosessen fra start til slutt — inkludert unntak — før en eneste linje med automatisering blir bygget.",
-        blocks: [
-          { heading: "Svømmebanekart", body: "Hver aktør, beslutningspunkt og overlevering, tegnet i BPMN 2.0 og validert av folkene som gjør jobben." },
-          { heading: "Unntaksveier", body: "Kantsakene blir designet med hensikt, ikke oppdaget i produksjon." },
-        ],
-      },
-      develop: {
-        title: "Utvikle", kicker: "TRINN 04 / 08",
-        summary: "Bygg med det enkleste pålitelige verktøyet — en API-integrasjon, et planlagt skript, eller en RPA-robot når systemet ikke gir noen annen vei inn.",
-        blocks: [
-          { heading: "Valg av verktøy", body: "API-er først, skript for dataflytting, RPA kun for lukkede systemer uten programmatisk tilgang." },
-          { heading: "Innebygde reserveløsninger", body: "Alt automatiseringen ikke trygt kan løse, rutes til et menneske — aldri stille forkastet." },
-        ],
-      },
-      test: {
-        title: "Test", kicker: "TRINN 05 / 08",
-        summary: "Kjør det mot ekte historiske data og reelle kantsaker før det noen gang rører produksjon.",
-        blocks: [
-          { heading: "Parallell kjøring", body: "Automatiseringen kjører side om side med den manuelle prosessen i en syklus, og resultatene sammenlignes linje for linje." },
-          { heading: "Feilinjeksjon", body: "Dårlige data, tidsavbrudd og manglende felt testes med hensikt, ikke bare håpet unngått." },
-        ],
-      },
-      deploy: {
-        title: "Lanser", kicker: "TRINN 06 / 08",
-        summary: "Lanser med en tilbakerullingsplan, tydelig eierskap, og en overlevering teamet faktisk kan vedlikeholde.",
-        blocks: [
-          { heading: "Trinnvis utrulling", body: "Nye automatiseringer kjører i skyggemodus, deretter på et utvalg saker, før de tar hele belastningen." },
-          { heading: "Dokumentasjon og overlevering", body: "Kjørelogger på klarspråk og en gjennomgangsøkt, slik at automatiseringen overlever selv om jeg går videre." },
-        ],
-      },
-      monitor: {
-        title: "Overvåk", kicker: "TRINN 07 / 08",
-        summary: "Hver automatisering rapporterer hva den gjorde, slik at avvik og feil dukker opp i løpet av dager, ikke måneder.",
-        blocks: [
-          { heading: "Statusdashboard", body: "Antall kjøringer, feilrate og spart tid, sporet per automatisering og gjennomgått månedlig." },
-          { heading: "Varsling", body: "Feil varsler et menneske umiddelbart — automatisering skal aldri feile i stillhet." },
-        ],
-      },
-      improve: {
-        title: "Forbedre", kicker: "TRINN 08 / 08",
-        summary: "Mål på nytt mot den opprinnelige basislinjen, og før det som læres tilbake inn i neste identifiseringsrunde.",
-        blocks: [
-          { heading: "Basislinje vs. faktisk", body: "30/90-dagerstallene sammenlignes med det opprinnelige estimatet, åpent, på dashbordet." },
-          { heading: "Tilbake til trinn én", body: "Hver forbedringssyklus avdekker neste kandidat — sløyfen er selve poenget." },
-        ],
-      },
-    },
-    news: {
-      kicker: "SISTE", heading: "Nyheter",
-      items: [
-        { id: "n1", date: "2026-08", title: "Kuttet fakturaavstemming fra 27 t/uke til under 1", body: "Ny robot håndterer avstemming på tvers av to gamle systemer uten delt API." },
-        { id: "n2", date: "2026-05", title: "Foredrag på OpsAutomate Summit", body: "Et foredrag om å måle avkastning på automatisering ærlig, ikke optimistisk." },
+// ---------------------------------------------------------------------------
+// Agentic AI story. Starts as a copy of the RPA content (so About, Contact,
+// footer etc. are shared by default) and overrides everything that changes:
+// hero text, the eight stages, news, projects, and all the animation text.
+// ---------------------------------------------------------------------------
+const AI_CONTENT = {
+  ...RPA_CONTENT,
+  tagline: "I take every AI agent through the same eight stages — from picking the right job to proving it can be trusted with it.",
+  heroLede: "Every agent runs through the same eight-stage lifecycle below — scroll to walk through it, or jump straight to a stage from the menu.",
+  stages: {
+    identify: {
+      title: "Identify", kicker: "STAGE 01 / 08",
+      summary: "Find the work where judgment, language, or messy input is the bottleneck — the kind rules alone can't handle.",
+      blocks: [
+        { heading: "Where candidates come from", body: "Inboxes, tickets, documents and \"it depends\" decisions — work where people read, interpret and decide before they act." },
+        { heading: "What disqualifies a task", body: "Zero tolerance for error, irreversible actions, or a perfectly good deterministic rule — those stay with RPA or with people." },
       ],
     },
-    projects: {
-      kicker: "UTVALGT ARBEID", heading: "Prosjekter",
-      items: [
-        { id: "p1", tag: "RPA", title: "Fakturamatchingsrobot", body: "UiPath-robot som matcher fakturaer mot innkjøpsordrer på tvers av to gamle systemer." },
-        { id: "p2", tag: "Skript", title: "Sendingsavstemmingspipeline", body: "Planlagt Python-jobb som erstatter en manuell regnearksprosess på 14 timer i uken." },
-        { id: "p3", tag: "Integrasjon", title: "Ruting av utgiftsgodkjenning", body: "Power Automate-flyt som kutter gjennomsnittlig godkjenningstid fra 6 dager til 9 timer." },
+    assess: {
+      title: "Scope", kicker: "STAGE 02 / 08",
+      summary: "Decide how much autonomy the agent earns: what it may read, decide and do — and what always goes to a human.",
+      blocks: [
+        { heading: "Value, effort and risk", body: "Value per task weighed against build effort, the cost of a wrong answer, and how ready the data really is." },
+        { heading: "Autonomy levels", body: "Suggest, then act with approval, then act within limits — each level has to be earned with evidence." },
       ],
     },
-    ctaBand: {
-      heading: "Har du en prosess teamet ditt har mistet tålmodigheten med?",
-      body: "Send en kort beskrivelse av arbeidsflyten — jeg skal ærlig fortelle deg om den er verdt å automatisere.",
-      button: "Ta kontakt",
-    },
-    about: {
-      kicker: "OM MEG",
-      heading: "Bakgrunn fra drift, ingeniørvaner.",
-      intro: "Ni år med å gå fra å drifte en operasjonsavdeling til å bygge systemene som erstattet de trege delene av den.",
-      sections: [
-        { heading: "2023 — nå · Senior automasjonsingeniør, Northgate Financial Services", body: "Eier automatiseringsveikartet for finansdrift: behandling av leverandør-/kundefordringer, avstemming og rapportering, med et fast tidsbesparelsesdashbord som gjennomgås månedlig av driftsledelsen." },
-        { heading: "2020 — 2023 · Prosessautomatiseringsingeniør, Harrow Logistics Group", body: "Ledet prosesskartlegging på tvers av lager og utsendelse, og omsatte arbeidsflyter fra gulvet til automatiseringer som kuttet manuell avstemming fra 14 timer i uken til under 1." },
-        { heading: "2017 — 2020 · Forretningsprosessanalytiker, Corvin & Wade Consulting", body: "Kartla og redesignet back office-prosesser for mellomstore kunder — og lærte at et prosesskart ingen kjenner seg igjen i, er verre enn ikke noe kart i det hele tatt." },
-        { heading: "Sertifiseringer", body: "UiPath Advanced RPA Developer · Lean Six Sigma Green Belt · Microsoft Power Platform Fundamentals." },
-      ],
-      skillsHeading: "VERKTØYKASSE",
-      skills: ["UiPath", "Power Automate", "Python", "SQL", "BPMN 2.0", "REST APIer", "Azure Logic Apps", "Power BI"],
-      ctaHeading: "Vil du ha den lange versjonen?",
-      ctaBody: "Gjerne en gjennomgang av spesifikke prosjekter og hva jeg ville gjort annerledes.",
-      ctaButton: "Ta kontakt",
-    },
-    contact: {
-      kicker: "KONTAKT",
-      heading: "Fortell meg om prosessen som bremser deg ned.",
-      intro: "Noen setninger om oppgaven, hvor ofte den skjer, og hvem som sitter fast med den, er nok til å starte med.",
-      formEndpoint: "",
-      sections: [
-        { heading: "E-post", body: "mats.ostvig@example.com" },
-        { heading: "LinkedIn", body: "linkedin.com/in/matsostvig" },
-        { heading: "Lokasjon", body: "Remote — åpen for oppdrag på stedet" },
-      ],
-      form: {
-        name: "Navn", email: "E-post", message: "Hvilken prosess snakker vi om?",
-        submit: "Send melding", sending: "Sender…",
-        sent: "Takk — jeg tar kontakt.", error: "Noe gikk galt — send meg heller en e-post direkte.",
-      },
-    },
-    identifyDemo: {
-      label: "KARTLEGGING AV ARBEIDSFLYT",
-      scanning: "Skanner arbeidsflyt…",
-      complete: "Skanning ferdig",
-      pending: "Venter på vurdering",
-      candidate: "Automatiser",
-      skip: "Behold manuelt",
-      summaryCandidate: "å automatisere",
-      summarySkip: "forblir manuelle",
-      cards: [
-        { title: "Fakturaregistrering", sub: "Økonomiflyt", freq: "Daglig", attrs: ["Høy frekvens", "Regelbasert", "Strukturerte data"] },
-        { title: "Kundeeskalering", sub: "Supportflyt", freq: "Daglig", attrs: ["Varierer", "Skjønnsvurdering", "Mange unntak"] },
-        { title: "Rapportsamling", sub: "Driftsflyt", freq: "Daglig", attrs: ["Høy frekvens", "Gjentakbare steg", "Stabile regler"] },
-        { title: "Årlig strategigjennomgang", sub: "Ledelsesflyt", freq: "Årlig", attrs: ["Lav frekvens", "Skiftende regler", "Åpen oppgave"] },
+    design: {
+      title: "Design", kicker: "STAGE 03 / 08",
+      summary: "Design the agent: its goal, the tools it may call, what it remembers, and the guardrails around every action.",
+      blocks: [
+        { heading: "Tools and permissions", body: "Least-privilege access: each tool gets only the permissions the task needs, and nothing standing." },
+        { heading: "Guardrails and escalation", body: "Confidence thresholds, approval steps and hard limits are designed in — not bolted on after the first incident." },
       ],
     },
-    assessDemo: {
-      label: "VURDERING",
-      cols: ["Spart tid", "Innsats", "Risiko"],
-      scoring: "Vurderer kandidater…",
-      ranked: "Rangert etter avkastning",
-      top: "Bygg først",
-      chips: ["Volum × spart tid", "Byggekompleksitet", "Systemstabilitet"],
-      rows: ["Utgiftsgodkjenning", "Fakturamatching", "Rapportsamling"],
-    },
-    designDemo: {
-      label: "PROSESSKART",
-      mapping: "Kartlegger prosess…",
-      mapped: "Kart ferdig — inkludert unntak",
-      lanes: ["AUTOMATISERING", "MENNESKE"],
-      nodes: ["Motta", "Valider", "Treff?", "Bokfør", "Manuell vurdering"],
-      yes: "ja",
-      no: "nei",
-      chips: ["5 steg", "1 beslutning", "1 unntaksvei"],
-    },
-    developDemo: {
-      label: "VALG AV VERKTØY",
-      situation: "Situasjon",
-      scenarios: ["Systemet har et API", "Det handler bare om å flytte data etter en plan", "Lukket system uten API"],
-      tools: [
-        { name: "API-integrasjon", rank: "1. valg" },
-        { name: "Planlagt skript", rank: "2. valg" },
-        { name: "RPA-robot", rank: "Siste utvei" },
+    develop: {
+      title: "Build", kicker: "STAGE 04 / 08",
+      summary: "Build with the simplest pattern that works — a single prompt first, a tool-using agent only when it must act, multiple agents almost never.",
+      blocks: [
+        { heading: "Start small", body: "Prompt and retrieval first. Add tools, memory and loops only when an evaluation shows they're needed." },
+        { heading: "Deterministic where possible", body: "Rules, schemas and validation wrap the model, so the creative part is small and everything else is predictable." },
       ],
-      choosing: "Velger det enkleste pålitelige verktøyet…",
-      done: "Enkleste pålitelige verktøy vinner",
-      summary: "Enkleste pålitelige verktøy først",
-      chips: ["API-er først", "Skript for data", "RPA sist"],
     },
-    testDemo: {
-      label: "PARALLELL KJØRING",
-      cols: ["Post", "Manuelt", "Automatisk"],
-      running: "Sammenligner resultater…",
-      passed: "Alle resultater stemmer",
-      chips: ["Dårlige data fanget", "Tidsavbrudd håndtert", "Manglende felt håndtert"],
+    test: {
+      title: "Evaluate", kicker: "STAGE 05 / 08",
+      summary: "Test the agent against real cases and adversarial ones before it touches production — an eval set, not a demo.",
+      blocks: [
+        { heading: "Eval sets", body: "Real historical cases with known answers, scored automatically and re-run on every change." },
+        { heading: "Red-teaming", body: "Prompt injection, hallucinations and broken tools are tested on purpose — and every failure becomes a permanent test case." },
+      ],
     },
-    deployDemo: {
-      label: "UTRULLING",
-      stages: ["Skyggemodus", "Utvalg av saker", "Full last"],
-      bar: "Saker håndtert av automatisering",
-      rolling: "Ruller ut…",
-      done: "Live og overlevert",
-      rollback: "Tilbakerullingsplan klar",
-      handoff: "Dokumentasjon og gjennomgang",
-      chips: ["Tilbakerullingsplan", "Tydelig eierskap", "Overlevering"],
+    deploy: {
+      title: "Deploy", kicker: "STAGE 06 / 08",
+      summary: "Ship with autonomy on a dial: shadow first, then human approval per action, then limited independence — plus a kill switch.",
+      blocks: [
+        { heading: "Staged autonomy", body: "Shadow mode, approval on every action, then autonomy within limits — promoted only on evidence." },
+        { heading: "Kill switch and ownership", body: "One switch to pause it, a named owner, and a runbook the team can actually follow." },
+      ],
     },
-    monitorDemo: {
-      label: "LIVE DASHBORD",
-      kpis: ["Kjøringer", "Unntak", "Timer spart"],
-      healthy: "Alle kjøringer friske",
-      alert: "Feil oppdaget — menneske varslet",
-      resolved: "Løst — tilbake til normalt",
-      monitoring: "Overvåker kjøringer…",
-      watching: "Overvåkingen fortsetter",
-      chips: ["Antall kjøringer", "Feilrate", "Spart tid"],
+    monitor: {
+      title: "Observe", kicker: "STAGE 07 / 08",
+      summary: "Every run leaves a trace — inputs, tool calls, decisions and cost — so drift and failures show up in days, not months.",
+      blocks: [
+        { heading: "Traces and quality", body: "Full traces, quality scores and cost per task, reviewed on a regular cadence." },
+        { heading: "Escalation by design", body: "Low-confidence or out-of-policy runs go to a person immediately, with the full context attached." },
+      ],
     },
-    improveDemo: {
-      label: "MÅL PÅ NYTT",
-      baseline: { label: "Opprinnelig estimat", value: "160 t/uke" },
-      measured: { label: "Målt etter 90 dager", value: "216 t/uke" },
-      delta: "+35 % mot estimat",
-      measuring: "Måler på nytt…",
-      done: "Matet tilbake inn i neste syklus",
-      next: { tag: "NY KANDIDAT", title: "Utgiftsgodkjenning", sub: "Tilbake til Identifiser" },
-      chips: ["Mål på nytt", "Sammenlign med basislinje", "Mat tilbake"],
+    improve: {
+      title: "Improve", kicker: "STAGE 08 / 08",
+      summary: "Turn production feedback into better evals, prompts and tools — and decide which parts can now run with less oversight.",
+      blocks: [
+        { heading: "Feedback into evals", body: "Corrections and escalations become new test cases, so the same mistake can't happen twice." },
+        { heading: "Earn more autonomy", body: "When the numbers hold, the agent graduates to a higher autonomy level — and the loop starts over." },
+      ],
     },
-    footer: { backHome: "← Tilbake til forsiden" },
+  },
+  news: {
+    kicker: "LATEST", heading: "News",
+    items: [
+      { id: "n1", date: "2026-09", title: "Support triage agent resolves 62% of tickets without a human", body: "Shadow-mode evals first, then staged autonomy with a kill switch." },
+      { id: "n2", date: "2026-06", title: "Talk: earning autonomy — promoting an AI agent safely", body: "Evals, guardrails and staged rollout, in practice." },
+    ],
+  },
+  projects: {
+    kicker: "SELECTED WORK", heading: "Projects",
+    items: [
+      { id: "p1", tag: "Agent", title: "Support triage agent", body: "Reads tickets, drafts replies, and routes the hard ones to a human." },
+      { id: "p2", tag: "RAG", title: "Policy answer assistant", body: "Answers staff questions from internal documents, with citations." },
+      { id: "p3", tag: "Agent", title: "Invoice exceptions agent", body: "Investigates mismatches across systems and proposes the fix for approval." },
+    ],
+  },
+  ctaBand: {
+    heading: "Wondering where an AI agent would actually help — and where it wouldn't?",
+    body: "Send a short description of the work — I'll tell you honestly whether it's a job for an agent, for rules, or for people.",
+    button: "Get in touch",
+  },
+  identifyDemo: {
+    label: "USE-CASE DISCOVERY",
+    scanning: "Scanning use cases…",
+    complete: "Scan complete",
+    pending: "Review pending",
+    candidate: "Use an agent",
+    skip: "Rules or RPA",
+    summaryCandidate: "fit for an agent",
+    summarySkip: "better as rules or RPA",
+    cards: [
+      { title: "Support ticket triage", sub: "Customer support", freq: "Daily", attrs: ["Free-text input", "Needs judgment", "Many phrasings"] },
+      { title: "Payroll calculation", sub: "Finance", freq: "Monthly", attrs: ["Exact rules", "Zero error margin", "Deterministic"] },
+      { title: "Contract clause review", sub: "Legal operations", freq: "Weekly", attrs: ["Dense documents", "Needs reading", "Human signs off"] },
+      { title: "Wire transfer approval", sub: "Treasury", freq: "Daily", attrs: ["Irreversible", "High stakes", "Hard limits"] },
+    ],
+  },
+  assessDemo: {
+    label: "SCOPING",
+    cols: ["Value", "Effort", "Risk"],
+    scoring: "Scoring use cases…",
+    ranked: "Ranked by value and risk",
+    top: "Pilot first",
+    chips: ["Value per task", "Cost of an error", "Data readiness"],
+    rows: ["Contract clause review", "Support ticket triage", "Invoice exceptions"],
+  },
+  designDemo: {
+    label: "AGENT BLUEPRINT",
+    mapping: "Mapping the agent…",
+    mapped: "Blueprint complete — guardrails included",
+    lanes: ["AGENT", "HUMAN"],
+    nodes: ["Receive", "Plan", "Sure?", "Act", "Human approval"],
+    yes: "yes",
+    no: "no",
+    chips: ["5 steps", "1 checkpoint", "1 escalation path"],
+  },
+  developDemo: {
+    label: "AGENT PATTERN",
+    situation: "Situation",
+    scenarios: ["It only needs to understand or draft text", "It must look things up and take actions", "It truly needs several specialists working together"],
+    tools: [
+      { name: "Single prompt", rank: "1st choice" },
+      { name: "Tool-using agent", rank: "2nd choice" },
+      { name: "Multi-agent system", rank: "Last resort" },
+    ],
+    choosing: "Picking the simplest pattern that works…",
+    done: "Simplest pattern wins",
+    summary: "Simplest pattern first",
+    chips: ["Prompt first", "Tools when needed", "Agents last"],
+  },
+  testDemo: {
+    label: "EVAL RUN",
+    cols: ["Case", "Expected", "Agent"],
+    running: "Scoring against the eval set…",
+    passed: "All eval cases pass",
+    chips: ["Prompt injection blocked", "Hallucination caught", "Tool failure handled"],
+  },
+  deployDemo: {
+    label: "AUTONOMY ROLLOUT",
+    stages: ["Shadow mode", "Human approves", "Acts within limits"],
+    bar: "Tasks handled by the agent",
+    rolling: "Raising autonomy…",
+    done: "Live, with a kill switch",
+    rollback: "Kill switch ready",
+    handoff: "Runbook and named owner",
+    chips: ["Kill switch", "Clear ownership", "Runbook"],
+  },
+  monitorDemo: {
+    label: "AGENT DASHBOARD",
+    kpis: ["Tasks", "Escalations", "Hours saved"],
+    healthy: "All tasks within policy",
+    alert: "Low-confidence answer — escalated to a human",
+    resolved: "Reviewed — added to the eval set",
+    monitoring: "Tracing every run…",
+    watching: "Tracing continues",
+    chips: ["Traces", "Cost per task", "Quality score"],
+  },
+  improveDemo: {
+    label: "RE-EVALUATE",
+    baseline: { label: "Baseline estimate", value: "160 h/week" },
+    measured: { label: "Measured at 90 days", value: "216 h/week" },
+    delta: "+35% vs. estimate",
+    measuring: "Re-evaluating…",
+    done: "Fed back into evals and the next cycle",
+    next: { tag: "NEXT CANDIDATE", title: "Contract clause review", sub: "Back to Identify" },
+    chips: ["Re-evaluate", "Compare to baseline", "Feed back"],
   },
 };
 
+export const CONTENT = { rpa: RPA_CONTENT, ai: AI_CONTENT };
+
 // =====================================================================================
-// Language hook — persists the choice in localStorage so it survives page/route
-// changes (this file doesn't assume a shared React context across routes).
+// Mode hook — remembers RPA / Agentic AI in localStorage so the choice survives
+// page and route changes (this file doesn't assume a shared React context).
 // =====================================================================================
-export function useLanguage() {
-  const [lang, setLangState] = useState(() => {
-    if (typeof window === "undefined") return "en";
-    try { return localStorage.getItem(LANG_STORAGE_KEY) || "en"; } catch { return "en"; }
+export function useMode() {
+  const [mode, setModeState] = useState(() => {
+    if (typeof window === "undefined") return "rpa";
+    try {
+      const v = localStorage.getItem(MODE_STORAGE_KEY);
+      return MODES.some((m) => m.code === v) ? v : "rpa";
+    } catch { return "rpa"; }
   });
-  function setLang(code) {
-    setLangState(code);
-    try { localStorage.setItem(LANG_STORAGE_KEY, code); } catch {}
+  function setMode(code) {
+    setModeState(code);
+    try { localStorage.setItem(MODE_STORAGE_KEY, code); } catch {}
   }
-  return [lang, setLang];
+  return [mode, setMode];
 }
 
-export function LanguageSwitcher({ lang, setLang }) {
+export function ModeSwitcher({ mode, setMode }) {
   return (
-    <div className="rpa-lang" role="group" aria-label="Language / Språk">
-      {LANGUAGES.map((l) => (
+    <div className="rpa-mode" role="group" aria-label="Story: RPA or Agentic AI">
+      {MODES.map((m) => (
         <button
-          key={l.code}
+          key={m.code}
           type="button"
-          className={lang === l.code ? "active" : ""}
-          onClick={() => setLang(l.code)}
-          aria-label={l.label}
-          aria-pressed={lang === l.code}
-          title={l.label}
+          className={mode === m.code ? "active" : ""}
+          onClick={() => setMode(m.code)}
+          aria-pressed={mode === m.code}
         >
-          {l.flag}
+          {m.label}
         </button>
       ))}
     </div>
@@ -578,14 +549,24 @@ export function LanguageSwitcher({ lang, setLang }) {
 
 // =====================================================================================
 // Content persistence — one Firestore document per language (collection
-// "siteContent", doc id = lang code) holds the whole CONTENT[lang] shape.
+// "siteContent", doc id = mode code) holds the whole CONTENT[mode] shape.
 // The public site reads it live; the AdminSection below writes it.
 // Falls back to localStorage if Firebase isn't enabled, and to the hardcoded
-// CONTENT[lang] above if nothing has been saved yet — so the site always
+// CONTENT[mode] above if nothing has been saved yet — so the site always
 // renders something sensible.
 // =====================================================================================
 const CONTENT_COLLECTION = "siteContent";
-const contentOverrideKey = (lang) => `site-content-override-${lang}`;
+const contentOverrideKey = (mode) => `site-content-override-${storageId(mode)}`;
+
+// The animation text (every *Demo block) is controlled from code, not from the
+// admin panel — so any saved copy of it is ignored. That keeps old saved data
+// from ever breaking the animations when their shape changes.
+function withoutDemos(obj) {
+  if (!obj || typeof obj !== "object") return obj;
+  const out = { ...obj };
+  Object.keys(out).forEach((k) => { if (/Demo$/.test(k)) delete out[k]; });
+  return out;
+}
 
 function deepMerge(base, override) {
   if (override === undefined || override === null) return base;
@@ -598,10 +579,10 @@ function deepMerge(base, override) {
   return override;
 }
 
-function readLocalOverride(lang) {
+function readLocalOverride(mode) {
   try {
-    const raw = localStorage.getItem(contentOverrideKey(lang));
-    return raw ? JSON.parse(raw) : null;
+    const raw = localStorage.getItem(contentOverrideKey(mode));
+    return raw ? withoutDemos(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
@@ -609,19 +590,19 @@ function readLocalOverride(lang) {
 
 // Reads the current merged content once (default merged with any local
 // override) — used to seed the admin panel's editable draft.
-export function getEditableContent(lang) {
-  const local = readLocalOverride(lang);
-  return local ? deepMerge(CONTENT[lang], local) : CONTENT[lang];
+export function getEditableContent(mode) {
+  const local = readLocalOverride(mode);
+  return local ? deepMerge(CONTENT[mode], local) : CONTENT[mode];
 }
 
 // Live content for the public-facing pages: defaults → local override → Firebase.
-export function useSiteContent(lang) {
-  const [content, setContent] = useState(() => deepMerge(CONTENT[lang], readLocalOverride(lang)));
-  const [source, setSource] = useState(() => (readLocalOverride(lang) ? "local" : "default"));
+export function useSiteContent(mode) {
+  const [content, setContent] = useState(() => deepMerge(CONTENT[mode], readLocalOverride(mode)));
+  const [source, setSource] = useState(() => (readLocalOverride(mode) ? "local" : "default"));
 
   useEffect(() => {
-    const local = readLocalOverride(lang);
-    setContent(deepMerge(CONTENT[lang], local));
+    const local = readLocalOverride(mode);
+    setContent(deepMerge(CONTENT[mode], local));
     setSource(local ? "local" : "default");
 
     if (!FIREBASE_ENABLED) return;
@@ -633,10 +614,10 @@ export function useSiteContent(lang) {
         const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
         const db = getFirestore(app);
         unsub = onSnapshot(
-          doc(db, CONTENT_COLLECTION, lang),
+          doc(db, CONTENT_COLLECTION, storageId(mode)),
           (snap) => {
             if (snap.exists()) {
-              setContent(deepMerge(CONTENT[lang], snap.data()));
+              setContent(deepMerge(CONTENT[mode], withoutDemos(snap.data())));
               setSource("firebase");
             }
           },
@@ -647,22 +628,23 @@ export function useSiteContent(lang) {
       }
     })();
     return () => unsub();
-  }, [lang]);
+  }, [mode]);
 
   return [content, source];
 }
 
 // Called by AdminSection below. Always mirrors to localStorage (so the admin panel
 // works with zero Firebase setup); also writes to Firestore when enabled.
-export async function saveSiteContent(lang, content) {
-  try { localStorage.setItem(contentOverrideKey(lang), JSON.stringify(content)); } catch {}
+export async function saveSiteContent(mode, rawContent) {
+  const content = withoutDemos(rawContent);
+  try { localStorage.setItem(contentOverrideKey(mode), JSON.stringify(content)); } catch {}
   if (!FIREBASE_ENABLED) return { ok: true, target: "local" };
   try {
     const { initializeApp, getApps } = await import("firebase/app");
     const { getFirestore, doc, setDoc } = await import("firebase/firestore");
     const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    await setDoc(doc(db, CONTENT_COLLECTION, lang), content);
+    await setDoc(doc(db, CONTENT_COLLECTION, storageId(mode)), content);
     return { ok: true, target: "firebase" };
   } catch (err) {
     console.error(err);
@@ -670,8 +652,8 @@ export async function saveSiteContent(lang, content) {
   }
 }
 
-export function resetSiteContent(lang) {
-  try { localStorage.removeItem(contentOverrideKey(lang)); } catch {}
+export function resetSiteContent(mode) {
+  try { localStorage.removeItem(contentOverrideKey(mode)); } catch {}
 }
 
 
@@ -712,10 +694,10 @@ export function GlobalStyles() {
       .rpa-nav-sub{ display:flex; gap:14px; align-items:center; margin-left:14px; padding-left:14px; border-left:1px solid var(--rpa-line); }
       .rpa-nav-sub a{ font-family:'Inter',sans-serif; font-weight:600; padding:8px 4px; }
       .rpa-nav-toggle{ display:none; background:none; border:none; cursor:pointer; color:var(--rpa-ink); }
-      .rpa-lang{ display:flex; gap:6px; align-items:center; }
-      .rpa-lang button{ background:none; border:1px solid var(--rpa-line); border-radius:8px; padding:3px 7px; font-size:1rem; line-height:1.4; cursor:pointer; opacity:.5; transition: all .15s ease; }
-      .rpa-lang button:hover{ opacity:.85; }
-      .rpa-lang button.active{ opacity:1; border-color:var(--rpa-primary); background:var(--rpa-primary-soft); }
+      .rpa-mode{ display:flex; gap:2px; padding:3px; background:var(--rpa-paper-dim); border:1px solid var(--rpa-line); border-radius:10px; }
+      .rpa-mode button{ border:none; background:none; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:0.8rem; line-height:1.2; padding:6px 12px; border-radius:7px; color:var(--rpa-ink-soft); cursor:pointer; white-space:nowrap; transition:all .15s ease; }
+      .rpa-mode button:hover{ color:var(--rpa-ink); }
+      .rpa-mode button.active{ background:#fff; color:var(--rpa-primary); box-shadow:0 1px 2px rgba(15,23,42,0.12); }
       @media (max-width:980px){
         .rpa-nav-links{ display:none; }
         .rpa-nav-toggle{ display:block; }
@@ -949,7 +931,15 @@ export function GlobalStyles() {
 // =====================================================================================
 // Small reusable pieces
 // =====================================================================================
+// Set `src` to a file you've put in /public (for example "logo.svg" or "logo.png")
+// to show your own logo everywhere the mark appears. Leave it null to use the
+// built-in flowchart mark below.
+export const LOGO = { src: null };
+
 export function Logo({ size = 26 }) {
+  if (LOGO.src) {
+    return <img src={`${import.meta.env.BASE_URL}${LOGO.src}`} alt="" width={size} height={size} style={{ display: "block", objectFit: "contain" }} />;
+  }
   // A trigger node branching into two connected process nodes — a small,
   // literal flowchart glyph, monochrome in THEME.primary. Swap this component
   // any time for a different logo; it's only referenced from the brand link
@@ -1032,7 +1022,7 @@ function HeroAnimation({ labels }) {
 // Identify-stage animation. A magnifier visits each workflow card in turn and
 // reads out that card's own attributes (good processes show positive traits,
 // bad ones show disqualifiers), then marks it "automate" or "keep manual".
-// Text lives in CONTENT[lang].identifyDemo. Timing: one tick = IDV_TICK_MS;
+// Text lives in CONTENT[mode].identifyDemo. Timing: one tick = IDV_TICK_MS;
 // each card takes IDV_TICKS_PER_CARD ticks: arrive, 3 attributes, verdict.
 const IDENTIFY_ICONS = [FileText, MessageSquare, BarChart3, Target];
 const IDENTIFY_VERDICTS = ["candidate", "skip", "candidate", "skip"];
@@ -1130,7 +1120,7 @@ function IdentifyAnimation({ t }) {
 // =====================================================================================
 // Stage animations (Assess → Improve). Same idea as IdentifyAnimation above: a
 // small looping scene per stage, driven by one shared ticker, with all text in
-// CONTENT[lang].<stage>Demo so it follows the language switch.
+// CONTENT[mode].<stage>Demo so it follows the language switch.
 // =====================================================================================
 function prefersReducedMotion() {
   return typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1303,9 +1293,9 @@ function DesignAnimation({ t }) {
 }
 
 // ---- 04 Develop: three situations, each picks the simplest tool that works -------------
-const DEVELOP_ICONS = [Plug, Terminal, Bot];
+const DEVELOP_ICONS = { rpa: [Plug, Terminal, Bot], ai: [MessageSquare, Wrench, Network] };
 
-function DevelopAnimation({ t }) {
+function DevelopAnimation({ t, mode }) {
   const d = t.developDemo;
   const PER = 4;
   const FINAL = d.tools.length * PER;
@@ -1329,7 +1319,7 @@ function DevelopAnimation({ t }) {
       </div>
       <div className="sv-tools">
         {d.tools.map((tool, i) => {
-          const Icon = DEVELOP_ICONS[i];
+          const Icon = (DEVELOP_ICONS[mode] || DEVELOP_ICONS.rpa)[i];
           return (
             <div key={i} className={`sv-tool ${toolState(i)}`}>
               <span className="idv-badge"><Check size={12} strokeWidth={3} /></span>
@@ -1584,7 +1574,7 @@ function scrollToSection(e, id, headerOffset = 90) {
 // =====================================================================================
 // Nav
 // =====================================================================================
-function TopNav({ activeId, t, lang, setLang }) {
+function TopNav({ activeId, t, mode, setMode }) {
   const [open, setOpen] = useState(false);
   return (
     <header className="rpa-nav">
@@ -1612,7 +1602,7 @@ function TopNav({ activeId, t, lang, setLang }) {
           <div className="rpa-nav-sub">
             <Link to="/about">{t.navAbout}</Link>
             <Link to="/contact">{t.navContact}</Link>
-            <LanguageSwitcher lang={lang} setLang={setLang} />
+            <ModeSwitcher mode={mode} setMode={setMode} />
           </div>
         </nav>
       </div>
@@ -1624,17 +1614,17 @@ function TopNav({ activeId, t, lang, setLang }) {
 // Main app
 // =====================================================================================
 function HomeSection() {
-  const [lang, setLang] = useLanguage();
-  const [t] = useSiteContent(lang);
+  const [mode, setMode] = useMode();
+  const [t] = useSiteContent(mode);
   const sectionIds = useMemo(() => ["home", ...STAGE_META.map((s) => s.id), "news", "projects"], []);
   const active = useScrollSpy(sectionIds);
   const news = t.news.items;
   const projects = t.projects.items;
 
   return (
-    <div className="rpa-root" lang={lang}>
+    <div className="rpa-root" lang="en" data-mode={mode}>
       <GlobalStyles />
-      <TopNav activeId={active} t={t} lang={lang} setLang={setLang} />
+      <TopNav activeId={active} t={t} mode={mode} setMode={setMode} />
 
       <section className="rpa-hero" id="home">
         <div className="rpa-wrap">
@@ -1666,13 +1656,13 @@ function HomeSection() {
                     <div className="rpa-kicker">{stage.kicker}</div>
                     <h2 className="rpa-h">{stage.title}</h2>
                     <p className="rpa-summary">{stage.summary}</p>
-                    {/* Add more entries to CONTENT[lang].stages.<id>.blocks to extend this stage */}
+                    {/* Add more entries to CONTENT[mode].stages.<id>.blocks to extend this stage */}
                     {stage.blocks.map((b, bi) => (
                       <Block key={bi} heading={b.heading} body={b.body} />
                     ))}
                   </div>
                   {Visual && (
-                    <div className="rpa-stage-visual"><Visual t={t} /></div>
+                    <div className="rpa-stage-visual"><Visual t={t} mode={mode} /></div>
                   )}
                 </section>
               </div>
@@ -1747,22 +1737,22 @@ function HomeSection() {
 // =====================================================================================
 
 function AboutSection() {
-  const [lang, setLang] = useLanguage();
-  const [t] = useSiteContent(lang);
+  const [mode, setMode] = useMode();
+  const [t] = useSiteContent(mode);
   const { about } = t;
 
   return (
-    <div className="rpa-root" lang={lang}>
+    <div className="rpa-root" lang="en" data-mode={mode}>
       <GlobalStyles />
       <header className="rpa-nav">
         <div className="rpa-nav-bar">
           <Link className="rpa-brand" to="/"><Logo size={22} />{t.name}</Link>
           <nav className="rpa-nav-links" style={{ display: "flex" }}>
-            <Link to="/">{lang === "no" ? "Hjem" : "Home"}</Link>
+            <Link to="/">Home</Link>
             <Link to="/about" className="active">{t.navAbout}</Link>
             <Link to="/contact">{t.navContact}</Link>
             <div className="rpa-nav-sub" style={{ marginLeft: 0, paddingLeft: 0, borderLeft: "none" }}>
-              <LanguageSwitcher lang={lang} setLang={setLang} />
+              <ModeSwitcher mode={mode} setMode={setMode} />
             </div>
           </nav>
         </div>
@@ -1779,7 +1769,7 @@ function AboutSection() {
       <section className="rpa-section" style={{ borderTop: "none" }}>
         <div className="rpa-wrap">
           <div>
-            {/* Add more entries to CONTENT[lang].about.sections in App.jsx to extend this list */}
+            {/* Add more entries to CONTENT[mode].about.sections in App.jsx to extend this list */}
             {about.sections.map((s, i) => (
               <div className="rpa-block" key={i}>
                 <h4>{s.heading}</h4>
@@ -1820,8 +1810,8 @@ function AboutSection() {
 }
 
 function ContactSection() {
-  const [lang, setLang] = useLanguage();
-  const [t] = useSiteContent(lang);
+  const [mode, setMode] = useMode();
+  const [t] = useSiteContent(mode);
   const { contact } = t;
   const [status, setStatus] = useState("idle"); // idle | sending | sent | error
 
@@ -1846,17 +1836,17 @@ function ContactSection() {
   }
 
   return (
-    <div className="rpa-root" lang={lang}>
+    <div className="rpa-root" lang="en" data-mode={mode}>
       <GlobalStyles />
       <header className="rpa-nav">
         <div className="rpa-nav-bar">
           <Link className="rpa-brand" to="/"><Logo size={22} />{t.name}</Link>
           <nav className="rpa-nav-links" style={{ display: "flex" }}>
-            <Link to="/">{lang === "no" ? "Hjem" : "Home"}</Link>
+            <Link to="/">Home</Link>
             <Link to="/about">{t.navAbout}</Link>
             <Link to="/contact" className="active">{t.navContact}</Link>
             <div className="rpa-nav-sub" style={{ marginLeft: 0, paddingLeft: 0, borderLeft: "none" }}>
-              <LanguageSwitcher lang={lang} setLang={setLang} />
+              <ModeSwitcher mode={mode} setMode={setMode} />
             </div>
           </nav>
         </div>
@@ -1893,7 +1883,7 @@ function ContactSection() {
           </form>
 
           <div>
-            {/* Add more entries to CONTENT[lang].contact.sections in App.jsx to extend this list */}
+            {/* Add more entries to CONTENT[mode].contact.sections in App.jsx to extend this list */}
             {contact.sections.map((s, i) => (
               <div className="rpa-block" key={i}>
                 <h4>{s.heading}</h4>
@@ -1920,7 +1910,7 @@ function cloneContent(value) {
   // JSON round-trip on purpose, not structuredClone: structuredClone throws if
   // CONTENT ever contains a function, whereas JSON.stringify silently drops
   // function-valued keys (and useSiteContent's deepMerge restores them from
-  // CONTENT[lang] when the edited content is read back).
+  // CONTENT[mode] when the edited content is read back).
   return JSON.parse(JSON.stringify(value));
 }
 
@@ -2123,15 +2113,15 @@ function AdminSection() {
   const [passInput, setPassInput] = useState("");
   const [passError, setPassError] = useState(false);
 
-  const [lang, setLang] = useState(LANGUAGES[0].code);
-  const [draft, setDraft] = useState(() => getEditableContent(lang));
+  const [mode, setMode] = useState(MODES[0].code);
+  const [draft, setDraft] = useState(() => getEditableContent(mode));
   const [tab, setTab] = useState("general");
   const [status, setStatus] = useState(null);
 
   useEffect(() => {
-    setDraft(getEditableContent(lang));
+    setDraft(getEditableContent(mode));
     setStatus(null);
-  }, [lang]);
+  }, [mode]);
 
   function set(path, value) {
     setDraft((prev) => {
@@ -2145,7 +2135,7 @@ function AdminSection() {
 
   async function handleSave() {
     setStatus({ type: "pending", message: "Saving…" });
-    const res = await saveSiteContent(lang, draft);
+    const res = await saveSiteContent(mode, draft);
     setStatus(
       res.ok
         ? { type: "ok", message: res.target === "firebase" ? "Saved to Firebase — live for every visitor." : "Saved in this browser (Firebase not connected — see README.md)." }
@@ -2155,8 +2145,8 @@ function AdminSection() {
 
   function handleReset() {
     if (!window.confirm("Discard saved overrides and revert this language to the code defaults?")) return;
-    resetSiteContent(lang);
-    setDraft(getEditableContent(lang));
+    resetSiteContent(mode);
+    setDraft(getEditableContent(mode));
     setStatus({ type: "ok", message: "Reverted to code defaults." });
   }
 
@@ -2193,8 +2183,8 @@ function AdminSection() {
         <div className="rpa-nav-bar">
           <Link className="rpa-brand" to="/"><Logo size={22} />Admin</Link>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <select value={lang} onChange={(e) => setLang(e.target.value)} style={{ fontFamily: "'JetBrains Mono', monospace", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--rpa-line)" }}>
-              {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.flag} {l.label}</option>)}
+            <select value={mode} onChange={(e) => setMode(e.target.value)} style={{ fontFamily: "'JetBrains Mono', monospace", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--rpa-line)" }}>
+              {MODES.map((m) => <option key={m.code} value={m.code}>{m.label}</option>)}
             </select>
             <Link to="/" className="rpa-btn" style={{ padding: "8px 16px" }}>View site</Link>
           </div>
