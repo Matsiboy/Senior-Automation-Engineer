@@ -40,6 +40,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Routes, Route, useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import {
   Search, ClipboardList, Compass, Code2, FlaskConical, Rocket, Activity,
   TrendingUp, Menu, X, ArrowUpRight, Mail, Github, Linkedin,
@@ -1968,58 +1969,6 @@ function HeadingBodyListEditor({ label, items, onChange, headingLabel = "Heading
   );
 }
 
-function NewsListEditor({ items, onChange }) {
-  function update(i, key, val) {
-    const next = items.slice();
-    next[i] = { ...next[i], [key]: val };
-    onChange(next);
-  }
-  function remove(i) { onChange(items.filter((_, idx) => idx !== i)); }
-  function add() {
-    onChange([...items, { id: `n-${Date.now()}`, date: new Date().toISOString().slice(0, 7), title: "New update", body: "" }]);
-  }
-  return (
-    <div className="adm-list">
-      <div className="adm-list-label">News items</div>
-      {items.map((it, i) => (
-        <div className="adm-list-item" key={it.id ?? i}>
-          <input value={it.date} placeholder="Date (e.g. 2026-08)" onChange={(e) => update(i, "date", e.target.value)} />
-          <input value={it.title} placeholder="Title" onChange={(e) => update(i, "title", e.target.value)} />
-          <textarea value={it.body} placeholder="Body" onChange={(e) => update(i, "body", e.target.value)} />
-          <button type="button" className="adm-remove" onClick={() => remove(i)}>Remove</button>
-        </div>
-      ))}
-      <button type="button" className="adm-add" onClick={add}>+ Add news item</button>
-    </div>
-  );
-}
-
-function ProjectsListEditor({ items, onChange }) {
-  function update(i, key, val) {
-    const next = items.slice();
-    next[i] = { ...next[i], [key]: val };
-    onChange(next);
-  }
-  function remove(i) { onChange(items.filter((_, idx) => idx !== i)); }
-  function add() {
-    onChange([...items, { id: `p-${Date.now()}`, tag: "Tag", title: "New project", body: "" }]);
-  }
-  return (
-    <div className="adm-list">
-      <div className="adm-list-label">Projects</div>
-      {items.map((it, i) => (
-        <div className="adm-list-item" key={it.id ?? i}>
-          <input value={it.tag} placeholder="Tag (e.g. RPA)" onChange={(e) => update(i, "tag", e.target.value)} />
-          <input value={it.title} placeholder="Title" onChange={(e) => update(i, "title", e.target.value)} />
-          <textarea value={it.body} placeholder="Body" onChange={(e) => update(i, "body", e.target.value)} />
-          <button type="button" className="adm-remove" onClick={() => remove(i)}>Remove</button>
-        </div>
-      ))}
-      <button type="button" className="adm-add" onClick={add}>+ Add project</button>
-    </div>
-  );
-}
-
 function ChipListEditor({ items, onChange }) {
   const [draft, setDraft] = useState("");
   function add() {
@@ -2090,17 +2039,594 @@ function AdminStyles() {
       .adm-status.ok{ color:var(--rpa-primary-dark); }
       .adm-status.error{ color:#B3261E; }
       .adm-status.pending{ color:var(--rpa-ink-soft); }
+
+      /* ---- Selected work editor ---- */
+      .we{ font-family:Inter,sans-serif; color:var(--rpa-ink); }
+      .we-loading{ padding:60px; text-align:center; color:var(--rpa-ink-soft); }
+      .we-bar{ display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; background:#fff; border:1px solid var(--rpa-line); border-radius:12px; padding:14px 18px; margin-bottom:14px; position:sticky; top:72px; z-index:20; }
+      .we-state{ display:flex; flex-direction:column; gap:4px; }
+      .we-chip{ display:inline-block; align-self:flex-start; font:600 .8rem Inter,sans-serif; padding:4px 10px; border-radius:999px; background:#eef1f6; color:#586477; }
+      .we-chip.draft{ background:#FFF4E0; color:#8A5A00; } .we-chip.ok{ background:#E6F4EA; color:#1E6B3A; }
+      .we-meta{ font-size:.8rem; color:var(--rpa-ink-soft); }
+      .we-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+      .we-btn{ font:500 .88rem Inter,sans-serif; padding:9px 16px; border-radius:8px; border:1.5px solid var(--rpa-line); background:#fff; color:var(--rpa-ink); cursor:pointer; }
+      .we-btn:hover:not(:disabled){ border-color:var(--rpa-primary); }
+      .we-btn.primary{ background:var(--rpa-primary); border-color:var(--rpa-primary); color:#fff; }
+      .we-btn:disabled{ opacity:.45; cursor:not-allowed; }
+      .we-mini{ font:500 .78rem Inter,sans-serif; padding:5px 10px; border-radius:7px; border:1px solid var(--rpa-line); background:#fff; cursor:pointer; color:var(--rpa-ink); }
+      .we-mini.danger{ color:#B3261E; } .we-mini:disabled{ opacity:.4; cursor:not-allowed; }
+      .we-link{ background:none; border:0; padding:0; color:var(--rpa-primary); text-decoration:underline; cursor:pointer; font:inherit; font-size:.85rem; }
+      .we-note{ border-radius:10px; padding:12px 16px; font-size:.88rem; margin-bottom:12px; border:1px solid; }
+      .we-note.ok{ background:#E6F4EA; border-color:#9ED0AE; color:#1E5A33; } .we-note.error{ background:#FDECEA; border-color:#F0A9A3; color:#8C1D18; } .we-note.warn{ background:#FFF4E0; border-color:#EBC27A; color:#6B4700; }
+      .we-grid{ display:grid; grid-template-columns:240px minmax(340px,1fr) minmax(420px,1.25fr); gap:18px; align-items:start; }
+      @media(max-width:1300px){ .we-grid{ grid-template-columns:220px 1fr; } .we-preview{ grid-column:1 / -1; } }
+      @media(max-width:760px){ .we-grid{ grid-template-columns:1fr; } }
+      .we-list,.we-form,.we-preview{ background:#fff; border:1px solid var(--rpa-line); border-radius:12px; padding:16px; min-width:0; }
+      .we-listhead{ display:flex; justify-content:space-between; margin-bottom:10px; font-size:.9rem; } .we-listhead span{ color:var(--rpa-ink-soft); font-size:.8rem; }
+      .we-item{ display:block; width:100%; text-align:left; padding:10px 12px; border:1.5px solid transparent; border-radius:9px; background:#f6f7f9; margin-bottom:8px; cursor:pointer; font:inherit; color:inherit; }
+      .we-item.on{ border-color:var(--rpa-primary); background:#fff; } .we-item.hidden{ opacity:.65; }
+      .we-itemtop{ display:flex; gap:8px; align-items:center; }
+      .we-order{ flex:none; width:20px; height:20px; border-radius:50%; background:var(--rpa-primary); color:#fff; font-size:.72rem; display:flex; align-items:center; justify-content:center; }
+      .we-itemtitle{ font-size:.88rem; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .we-itemmeta{ display:block; font-size:.74rem; color:var(--rpa-ink-soft); margin:4px 0 0 28px; }
+      .we-addwrap{ position:relative; margin:6px 0 14px; }
+      .we-menu{ position:absolute; z-index:30; left:0; top:calc(100% + 4px); background:#fff; border:1px solid var(--rpa-line); border-radius:10px; box-shadow:0 10px 24px #0f172a1a; padding:6px; min-width:200px; }
+      .we-menu button{ display:block; width:100%; text-align:left; padding:8px 10px; background:none; border:0; border-radius:6px; cursor:pointer; font:inherit; } .we-menu button:hover{ background:#f1f4f9; }
+      .we-formhead{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+      .we-formhead h3{ margin:0; font:600 1.05rem 'Space Grotesk',sans-serif; overflow-wrap:anywhere; flex:1; min-width:140px; }
+      .we-row{ display:flex; gap:6px; flex-wrap:wrap; }
+      .we-tabs{ display:flex; gap:4px; border-bottom:1px solid var(--rpa-line); margin-bottom:16px; }
+      .we-tabs button{ padding:9px 16px; border:0; background:none; border-bottom:2px solid transparent; cursor:pointer; font:500 .9rem Inter,sans-serif; color:var(--rpa-ink-soft); margin-bottom:-1px; }
+      .we-tabs button.on{ color:var(--rpa-primary); border-bottom-color:var(--rpa-primary); }
+      .we-stack{ display:flex; flex-direction:column; gap:14px; }
+      .we-field{ display:flex; flex-direction:column; gap:5px; }
+      .we-fl{ display:flex; justify-content:space-between; font-size:.8rem; font-weight:600; color:var(--rpa-ink); }
+      .we-count{ font-weight:400; color:var(--rpa-ink-soft); font-family:'JetBrains Mono',monospace; font-size:.72rem; } .we-count.full{ color:#B3261E; }
+      .we-field input,.we-field textarea{ width:100%; box-sizing:border-box; padding:9px 11px; border:1.5px solid var(--rpa-line); border-radius:8px; font:.92rem Inter,sans-serif; color:var(--rpa-ink); background:#fff; resize:vertical; }
+      .we-field input:focus,.we-field textarea:focus,.we-hexrow input:focus{ outline:2px solid var(--rpa-primary); outline-offset:1px; border-color:var(--rpa-primary); }
+      .we-help{ font-size:.78rem; color:var(--rpa-ink-soft); margin:0; } .we-error{ font-size:.8rem; color:#B3261E; margin:0; } .we-warn{ font-size:.8rem; color:#7A5200; margin:4px 0 0; }
+      .we-switch{ display:flex; gap:10px; align-items:center; font-size:.92rem; font-weight:500; cursor:pointer; } .we-switch input{ width:18px; height:18px; }
+      .we-group{ border:1px solid var(--rpa-line); border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:12px; background:#fbfbfc; }
+      .we-grouphead{ display:flex; flex-direction:column; gap:2px; } .we-grouphead strong{ font-size:.92rem; } .we-grouphead span{ font-size:.76rem; color:var(--rpa-ink-soft); }
+      .we-section{ border:1px dashed var(--rpa-line); border-radius:9px; padding:12px; display:flex; flex-direction:column; gap:10px; background:#fff; }
+      .we-two{ display:grid; grid-template-columns:1fr 1fr; gap:12px; } @media(max-width:560px){ .we-two{ grid-template-columns:1fr; } }
+      .we-templates{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+      .we-template{ min-width:0; overflow:hidden; display:flex; flex-direction:column; gap:3px; text-align:left; padding:8px; border:1.5px solid var(--rpa-line); border-radius:10px; background:#fff; cursor:pointer; font:inherit; color:inherit; }
+      .we-tname{ font-size:.84rem; font-weight:600; } .we-thint{ font-size:.72rem; color:var(--rpa-ink-soft); }
+      .we-template.on{ border-color:var(--rpa-primary); box-shadow:0 0 0 3px #dce5f9; }
+      .we-thumb{ min-height:0 !important; background:transparent !important; height:76px; overflow:hidden; border-radius:6px; border:1px solid var(--rpa-line); position:relative; margin-bottom:6px; }
+      .we-thumb-in{ position:absolute; top:0; left:0; width:560px; transform:scale(.32); transform-origin:top left; pointer-events:none; }
+      .we-thumb-img{ display:flex; align-items:center; justify-content:center; height:100%; background:#edf2fb; }
+      .we-swatches{ display:flex; gap:8px; flex-wrap:wrap; }
+      .we-swatch{ width:34px; height:34px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1.5px var(--rpa-line); cursor:pointer; } .we-swatch.on{ box-shadow:0 0 0 2.5px var(--rpa-primary); }
+      .we-hexrow{ display:flex; gap:8px; align-items:center; }
+      .we-hexrow input[type=color]{ width:42px; height:36px; padding:2px; border:1.5px solid var(--rpa-line); border-radius:8px; background:#fff; cursor:pointer; }
+      .we-hexrow input[type=text]{ flex:1; min-width:0; padding:9px 11px; border:1.5px solid var(--rpa-line); border-radius:8px; font:.9rem 'JetBrains Mono',monospace; }
+      .we-range{ display:flex; flex-direction:column; gap:3px; font-size:.78rem; color:var(--rpa-ink-soft); margin-top:8px; }
+      .we-crop{ min-height:0 !important; background:transparent !important; margin:6px 0; }
+      .we-previewhead{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+      .we-seg{ display:inline-flex; border:1.5px solid var(--rpa-line); border-radius:9px; overflow:hidden; }
+      .we-seg button{ padding:6px 14px; border:0; background:#fff; font:500 .82rem Inter,sans-serif; cursor:pointer; } .we-seg button.on{ background:var(--rpa-primary); color:#fff; }
+      .we-framehost{ width:100%; margin-top:10px; }
+      .we-frame-wrap{ margin:0 auto; border:1px solid var(--rpa-line); border-radius:10px; overflow:hidden; background:#f8f7f3; box-sizing:content-box; }
+      .we-frame{ border:0; display:block; transform-origin:top left; }
+      .we-warnlist{ list-style:none; padding:0; margin:12px 0 0; font-size:.8rem; color:#7A5200; display:flex; flex-direction:column; gap:4px; }
+      .we-acct{ position:relative; font-size:.85rem; color:var(--rpa-ink-soft); }
+      .we-pop{ position:absolute; right:0; top:calc(100% + 8px); z-index:60; width:280px; background:#fff; border:1px solid var(--rpa-line); border-radius:12px; box-shadow:0 14px 30px #0f172a22; padding:14px; display:flex; flex-direction:column; gap:9px; text-align:left; }
+      .we-details{ margin-top:8px; } .we-details summary{ cursor:pointer; font-weight:600; } .we-details ol{ margin:8px 0 8px 18px; padding:0; } .we-details li{ margin:3px 0; }
+      .we-pre{ background:#0f172a; color:#e6edf7; padding:12px; border-radius:8px; overflow:auto; font:12px/1.5 'JetBrains Mono',monospace; white-space:pre; margin:8px 0; }
+      .we-pop input{ padding:9px 11px; border:1.5px solid var(--rpa-line); border-radius:8px; font:.9rem Inter,sans-serif; }
     `}</style>
   );
 }
 
+// =====================================================================================
+// SELECTED WORK EDITOR (/admin → "Selected work")
+// A template-based editor: pick a card, edit its Content, dress it on the Appearance tab,
+// and watch the real homepage section update in a live preview (desktop or mobile width).
+//
+// How changes persist
+//   draft      → this browser's localStorage, saved automatically; only you see it.
+//   publish    → one click writes the cards to Firestore (siteContent/work, plus one
+//                siteContent/workimg-<id> document per uploaded image). Everyone who loads
+//                the homepage afterwards sees the new cards; open pages update live.
+//   Publishing needs write access. If your Firestore rules require sign-in, use "Sign in"
+//   (Firebase Auth, email + password) at the top right.
+// =====================================================================================
+
+const jsonClone = (v) => JSON.parse(JSON.stringify(v));
+const hashStr = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(16) + s.length.toString(16); };
+const fmtTime = (ms) => new Date(ms).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+
+// Shrinks an uploaded picture so it fits a Firestore document: JPEG, longest side ≤ 1400 px,
+// quality lowered step by step until the data URL is under WORK_IMAGE_MAX_CHARS.
+async function compressWorkImage(file) {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error("Use a JPG, PNG or WebP picture. (iPhone HEIC photos need converting first.)");
+  if (file.size > 12 * 1024 * 1024) throw new Error("That file is over 12 MB — pick a smaller one.");
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("That file couldn't be read as a picture.")); i.src = url; });
+    for (const [maxW, q] of [[1400, 0.82], [1400, 0.72], [1200, 0.66], [1000, 0.6], [800, 0.55]]) {
+      const k = Math.min(1, maxW / img.naturalWidth);
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+      const data = c.toDataURL("image/jpeg", q);
+      if (data.length <= WORK_IMAGE_MAX_CHARS) return { data, width: c.width, height: c.height };
+    }
+    throw new Error("Couldn't shrink that picture enough — try a simpler or smaller one.");
+  } finally { URL.revokeObjectURL(url); }
+}
+
+function useWorkAuth() {
+  const [user, setUser] = useState(undefined); // undefined = still checking, null = signed out
+  useEffect(() => getWorkStore().auth.watch(setUser), []);
+  return user;
+}
+
+// ---- small form pieces -------------------------------------------------------------
+function LimitedField({ label, value, onChange, max, multiline, rows = 3, help, error, id }) {
+  const Tag = multiline ? "textarea" : "input";
+  return (
+    <label className="we-field">
+      <span className="we-fl"><span>{label}</span><span className={`we-count${value.length >= max ? " full" : ""}`}>{value.length}/{max}</span></span>
+      <Tag id={id} value={value} maxLength={max} rows={multiline ? rows : undefined} onChange={(e) => onChange(e.target.value)} />
+      {help && <span className="we-help">{help}</span>}
+      {error && <span className="we-error">{error}</span>}
+    </label>
+  );
+}
+
+function HexField({ label, value, onCommit }) {
+  const [text, setText] = useState(value);
+  useEffect(() => setText(value), [value]);
+  return (
+    <div className="we-hex">
+      <span className="we-fl"><span>{label}</span></span>
+      <div className="we-hexrow">
+        <input type="color" value={value} aria-label={`${label} colour picker`} onChange={(e) => onCommit(e.target.value.toUpperCase())} />
+        <input type="text" value={text} aria-label={`${label} hex value`} maxLength={7} spellCheck={false}
+          onChange={(e) => { const v = e.target.value.trim(); setText(v); if (isHex6(v)) onCommit(v.toUpperCase()); }}
+          onBlur={() => setText(value)} />
+      </div>
+    </div>
+  );
+}
+
+function TemplateThumb({ template }) {
+  const card = normalizeWorkCard({ id: "thumb", content: { title: "x", illustrative: false }, appearance: { template: template === "image" ? "workflow" : template } }, 0);
+  return (
+    <div className="mr-app we-thumb" aria-hidden="true">
+      {template === "image"
+        ? <div className="we-thumb-img"><svg viewBox="0 0 48 32" width="64" height="42"><rect x="1" y="1" width="46" height="30" rx="3" fill="none" stroke="#7994CA" strokeWidth="1.5" /><circle cx="14" cy="11" r="3.5" fill="#7994CA" /><path d="M3 28l12-10 8 6 8-9 14 13" fill="none" stroke="#7994CA" strokeWidth="1.5" strokeLinejoin="round" /></svg></div>
+        : <div className="we-thumb-in"><WorkArt card={card} /></div>}
+    </div>
+  );
+}
+
+// ---- the live preview: the real homepage section inside an iframe of the chosen width -----
+function PreviewFrame({ width, children }) {
+  const hostRef = useRef(null);
+  const [doc, setDoc] = useState(null), [height, setHeight] = useState(380), [scale, setScale] = useState(1);
+  useEffect(() => {
+    const el = hostRef.current; if (!el) return;
+    const fit = () => setScale(Math.min(1, Math.max(0.2, el.clientWidth / width)));
+    fit();
+    const ro = new ResizeObserver(fit); ro.observe(el);
+    return () => ro.disconnect();
+  }, [width]);
+  useEffect(() => {
+    if (!doc) return;
+    const measure = () => setHeight(Math.max(260, Math.ceil(doc.documentElement.scrollHeight)));
+    measure();
+    const ro = new doc.defaultView.ResizeObserver(measure); ro.observe(doc.body);
+    return () => ro.disconnect();
+  }, [doc]);
+  return (
+    <div className="we-framehost" ref={hostRef}><div className="we-frame-wrap" style={{ width: width * scale, height: height * scale }}>
+      <iframe title="Live preview of the Selected work section" className="we-frame"
+        srcDoc={'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#f8f7f3"></body></html>'}
+        onLoad={(e) => setDoc(e.target.contentDocument)}
+        style={{ width, height, transform: `scale(${scale})` }} />
+      {doc && createPortal(<><style>{MR_CSS}</style>{children}</>, doc.body)}
+    </div></div>
+  );
+}
+
+function WorkPreview({ cards, images, selectedId, onSelect, device, dialogOpen, setDialogOpen }) {
+  const closeRef = useRef(null);
+  const shown = cards.filter((c) => c.visible), sel = cards.find((c) => c.id === selectedId);
+  return (
+    <PreviewFrame width={device === "mobile" ? 390 : 1100}>
+      <div className="mr-app" style={{ minHeight: 0 }}>
+        <main>
+          {shown.length
+            ? <WorkSection cards={shown} localImages={images} selectedId={selectedId} onOpen={(e, card) => { onSelect(card.id); setDialogOpen(true); }} />
+            : <div style={{ padding: "70px 24px", textAlign: "center", fontSize: 13, color: "#586477" }}>No visible cards — the whole “Selected work” section (and its menu link) is hidden on the homepage.</div>}
+        </main>
+        {dialogOpen && sel && sel.visible && (
+          <ModalShell kicker={sel.content.illustrative ? "ILLUSTRATIVE CASE STUDY" : "CASE STUDY"} title={sel.content.title} onDismiss={() => setDialogOpen(false)} closeRef={closeRef}>
+            <CaseStudyBody card={sel} />
+          </ModalShell>
+        )}
+      </div>
+    </PreviewFrame>
+  );
+}
+
+// ---- content tab -------------------------------------------------------------------
+function WorkContentForm({ card, onChange }) {
+  const c = card.content;
+  const setC = (patch) => onChange((x) => ({ ...x, content: { ...x.content, ...patch } }));
+  const setSection = (i, patch) => setC({ sections: c.sections.map((s, k) => (k === i ? { ...s, ...patch } : s)) });
+  const moveSection = (i, d) => { const a = c.sections.slice(), j = i + d; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; setC({ sections: a }); };
+  const urlBad = c.link.url && !safeHttpUrl(c.link.url);
+  return (
+    <div className="we-stack">
+      <label className="we-switch"><input type="checkbox" checked={card.visible} onChange={(e) => onChange((x) => ({ ...x, visible: e.target.checked }))} /><span>Show this card on the homepage</span></label>
+      <LimitedField label="Category" value={c.category} max={WORK_LIMITS.category} onChange={(v) => setC({ category: v })} help="Small label above the title, e.g. RPA · SYSTEM INTEGRATION." />
+      <LimitedField label="Title" value={c.title} max={WORK_LIMITS.title} onChange={(v) => setC({ title: v })} error={!c.title.trim() ? "A title is required." : null} />
+      <LimitedField label="Description" value={c.description} max={WORK_LIMITS.description} multiline rows={3} onChange={(v) => setC({ description: v })} />
+      <LimitedField label="Card link text" value={c.linkLabel} max={WORK_LIMITS.linkLabel} onChange={(v) => setC({ linkLabel: v })} help="The call to action at the bottom of the card. Clicking a card opens its case study." />
+      <label className="we-switch"><input type="checkbox" checked={c.illustrative} onChange={(e) => setC({ illustrative: e.target.checked })} /><span>Illustrative example</span></label>
+      <p className="we-help">On: the card and its case study are labelled “illustrative” and the section shows a disclaimer. Turn it off only for real, verified work.</p>
+
+      <div className="we-group">
+        <div className="we-grouphead"><strong>Case study</strong><span>Shown when a visitor opens the card · up to {WORK_LIMITS.maxSections} sections</span></div>
+        {c.sections.map((s, i) => (
+          <div className="we-section" key={i}>
+            <LimitedField label={`Section ${i + 1} heading`} value={s.heading} max={WORK_LIMITS.heading} onChange={(v) => setSection(i, { heading: v })} />
+            <LimitedField label="Text" value={s.body} max={WORK_LIMITS.body} multiline rows={3} onChange={(v) => setSection(i, { body: v })} />
+            <div className="we-row">
+              <button type="button" className="we-mini" disabled={i === 0} onClick={() => moveSection(i, -1)}>↑ Up</button>
+              <button type="button" className="we-mini" disabled={i === c.sections.length - 1} onClick={() => moveSection(i, 1)}>↓ Down</button>
+              <button type="button" className="we-mini danger" onClick={() => setC({ sections: c.sections.filter((_, k) => k !== i) })}>Remove</button>
+            </div>
+          </div>
+        ))}
+        {c.sections.length < WORK_LIMITS.maxSections && <button type="button" className="we-btn" onClick={() => setC({ sections: [...c.sections, { heading: "", body: "" }] })}>+ Add section</button>}
+      </div>
+
+      <div className="we-group">
+        <div className="we-grouphead"><strong>External link</strong><span>Optional — a button inside the case study</span></div>
+        <LimitedField label="Link text" value={c.link.label} max={WORK_LIMITS.linkLabel} onChange={(v) => setC({ link: { ...c.link, label: v } })} />
+        <LimitedField label="Web address" value={c.link.url} max={WORK_LIMITS.url} onChange={(v) => setC({ link: { ...c.link, url: v } })} help="Must start with https://" error={urlBad ? "That isn't a valid https:// address, so it won't be published." : null} />
+      </div>
+    </div>
+  );
+}
+
+// ---- appearance tab ----------------------------------------------------------------
+function WorkAppearanceForm({ card, onChange, images, onUpload, onRemoveImage, uploadState }) {
+  const ap = card.appearance, tpl = WORK_TEMPLATES[ap.template], im = ap.image, L = workLabels(card);
+  const cropSrc = useWorkImageSrc(card, images);
+  const setAp = (patch) => onChange((x) => ({ ...x, appearance: { ...x.appearance, ...patch } }));
+  const setLabel = (key, v) => setAp({ labels: { ...ap.labels, [ap.template]: { ...(ap.labels[ap.template] || {}), [key]: v } } });
+  const setImage = (patch) => setAp({ image: { ...im, ...patch } });
+  const pickTemplate = (t) => {
+    if (t === ap.template) return;
+    const old = WORK_TEMPLATES[ap.template].colors, untouched = sameHex(ap.accent, old.accent) && sameHex(ap.background, old.background);
+    setAp({ template: t, ...(untouched ? { accent: WORK_TEMPLATES[t].colors.accent, background: WORK_TEMPLATES[t].colors.background } : {}) });
+  };
+  const warnings = workContrastWarnings(ap);
+  const isDefaultLook = !workArtVars(ap);
+  return (
+    <div className="we-stack">
+      <div className="we-group">
+        <div className="we-grouphead"><strong>Template</strong><span>The artwork shown at the top of the card</span></div>
+        <div className="we-templates" role="radiogroup" aria-label="Template">
+          {WORK_TEMPLATE_ORDER.map((t) => (
+            <button type="button" key={t} role="radio" aria-checked={ap.template === t} className={`we-template${ap.template === t ? " on" : ""}`} onClick={() => pickTemplate(t)}>
+              <TemplateThumb template={t} /><span className="we-tname">{WORK_TEMPLATES[t].name}</span><span className="we-thint">{WORK_TEMPLATES[t].hint}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="we-group">
+        <div className="we-grouphead"><strong>Colours</strong><span>{isDefaultLook ? "Using this template's original colours" : "Custom colours"}</span></div>
+        <div className="we-swatches">
+          {WORK_PALETTES.map((p) => (
+            <button type="button" key={p.name} className={`we-swatch${sameHex(p.accent, ap.accent) && sameHex(p.background, ap.background) ? " on" : ""}`} title={p.name} aria-label={`${p.name} palette`}
+              style={{ background: `linear-gradient(135deg, ${p.background} 50%, ${p.accent} 50%)` }} onClick={() => setAp({ accent: p.accent, background: p.background })} />
+          ))}
+        </div>
+        <div className="we-two">
+          <HexField label="Accent" value={ap.accent} onCommit={(v) => setAp({ accent: v })} />
+          <HexField label="Background" value={ap.background} onCommit={(v) => setAp({ background: v })} />
+        </div>
+        <div className="we-row"><button type="button" className="we-mini" onClick={() => setAp({ accent: tpl.colors.accent, background: tpl.colors.background })}>Reset colours</button></div>
+        {warnings.map((w, i) => <p className="we-warn" key={i}>⚠ {w}</p>)}
+      </div>
+
+      {ap.template !== "image" && (
+        <div className="we-group">
+          <div className="we-grouphead"><strong>Illustration text</strong><span>Only the words — layout and type size stay fixed</span></div>
+          {tpl.labels.map((f) => (
+            <LimitedField key={f.key} label={f.name} value={L[f.key]} max={f.max} multiline={f.multiline} rows={2} onChange={(v) => setLabel(f.key, v)} />
+          ))}
+          <div className="we-row"><button type="button" className="we-mini" onClick={() => setAp({ labels: { ...ap.labels, [ap.template]: {} } })}>Reset text to the template's wording</button></div>
+        </div>
+      )}
+
+      {ap.template === "image" && (
+        <div className="we-group">
+          <div className="we-grouphead"><strong>Image</strong><span>Cropped to a wide frame on the card</span></div>
+          <LimitedField label="Top label (optional)" value={L.flow} max={44} onChange={(v) => setLabel("flow", v)} />
+          <div className="we-two">
+            <div>
+              <span className="we-fl"><span>Upload a picture</span></span>
+              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { const f = e.target.files && e.target.files[0]; if (f) onUpload(f); e.target.value = ""; }} />
+              {uploadState && <span className={uploadState.kind === "error" ? "we-error" : "we-help"}>{uploadState.text}</span>}
+            </div>
+            <LimitedField label="…or a web address" value={im.kind === "url" ? im.url : ""} max={WORK_LIMITS.url} onChange={(v) => setImage({ kind: v ? "url" : "none", url: v, ref: "", hash: "" })}
+              help="https://… or a file in your site's public folder, e.g. images/project.jpg" error={im.kind === "url" && im.url && !safeImageUrl(im.url) ? "Not a valid image address." : null} />
+          </div>
+          {im.kind === "upload" && <p className="we-help">Uploaded picture · {Math.round(((images[card.id] || "").length * 0.75) / 1024) || "stored"}{images[card.id] ? " KB" : " (published)"} · <button type="button" className="we-link" onClick={onRemoveImage}>Remove picture</button></p>}
+          <LimitedField label="Description for screen readers" value={im.alt} max={WORK_LIMITS.alt} onChange={(v) => setImage({ alt: v })} help="Leave empty to use the card title." />
+          <div className="we-crop-wrap">
+            <span className="we-fl"><span>Crop</span></span>
+            <div className="mr-app we-crop"><div className="mr-projectart mr-art-image" style={{ minHeight: 0, height: 128 }}><ArtImage src={cropSrc} image={im} title={card.content.title} /></div></div>
+            <label className="we-range"><span>Zoom {Math.round(im.zoom * 100)}%</span><input type="range" min="1" max="3" step="0.05" value={im.zoom} onChange={(e) => setImage({ zoom: Number(e.target.value) })} /></label>
+            <label className="we-range"><span>Focus: left ↔ right</span><input type="range" min="0" max="100" value={im.x} onChange={(e) => setImage({ x: Number(e.target.value) })} /></label>
+            <label className="we-range"><span>Focus: top ↔ bottom</span><input type="range" min="0" max="100" value={im.y} onChange={(e) => setImage({ y: Number(e.target.value) })} /></label>
+            <div className="we-row"><button type="button" className="we-mini" onClick={() => setImage({ zoom: 1, x: 50, y: 50 })}>Reset crop</button></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---- the editor ------------------------------------------------------------------
+function WorkAdmin({ user, askSignIn }) {
+  const store = getWorkStore();
+  const [pub, setPub] = useState({ ready: false, cards: [], updatedAt: null, hasDoc: false, error: null });
+  const [draft, setDraft] = useState(null); // { cards, images: {cardId: dataURL}, baseUpdatedAt }
+  const [selId, setSelId] = useState(null), [tab, setTab] = useState("content"), [device, setDevice] = useState("desktop");
+  const [dialogOpen, setDialogOpen] = useState(false), [busy, setBusy] = useState(false), [msg, setMsg] = useState(null);
+  const [savedAt, setSavedAt] = useState(null), [uploadState, setUploadState] = useState(null), [unauth, setUnauth] = useState(false), [addOpen, setAddOpen] = useState(false);
+
+  // published copy (live)
+  useEffect(() => {
+    const t = setTimeout(() => setPub((p) => (p.ready ? p : { ready: true, cards: normalizeWorkCards(defaultWorkCards()), updatedAt: null, hasDoc: false, error: "Couldn't reach Firebase — showing the built-in cards. You can still edit a draft." })), 4000);
+    const off = store.subscribe(
+      (doc) => setPub({ ready: true, cards: doc && Array.isArray(doc.cards) ? normalizeWorkCards(doc.cards) : normalizeWorkCards(defaultWorkCards()), updatedAt: doc ? doc.updatedAt || 0 : null, hasDoc: !!doc, error: null }),
+      (err) => setPub((p) => ({ ...p, ready: true, cards: p.ready ? p.cards : normalizeWorkCards(defaultWorkCards()), error: "Couldn't read the published cards: " + String((err && err.message) || err) }))
+    );
+    return () => { clearTimeout(t); off(); };
+  }, []);
+
+  // first draft: a saved local draft if there is one, otherwise the published cards
+  useEffect(() => {
+    if (!pub.ready || draft) return;
+    const saved = readJsonLS(WORK_DRAFT_KEY);
+    const d = saved && Array.isArray(saved.cards) ? { cards: normalizeWorkCards(saved.cards, { keepEmpty: true }), images: saved.images && typeof saved.images === "object" ? saved.images : {}, baseUpdatedAt: saved.baseUpdatedAt ?? null }
+      : { cards: jsonClone(pub.cards), images: {}, baseUpdatedAt: pub.updatedAt };
+    setDraft(d);
+    setSelId(d.cards[0] ? d.cards[0].id : null);
+  }, [pub.ready]);
+
+  const dirty = !!draft && pub.ready && workKey(draft.cards) !== workKey(pub.cards);
+  const conflict = dirty && draft.baseUpdatedAt !== pub.updatedAt;
+
+  // autosave the draft in this browser
+  useEffect(() => {
+    if (!draft || !pub.ready) return;
+    const t = setTimeout(() => {
+      if (!dirty) { removeLS(WORK_DRAFT_KEY); setSavedAt(null); return; }
+      const ok = writeJsonLS(WORK_DRAFT_KEY, { v: 1, savedAt: Date.now(), baseUpdatedAt: draft.baseUpdatedAt, cards: draft.cards, images: draft.images });
+      if (ok) setSavedAt(Date.now()); else setMsg({ kind: "error", text: "This browser's storage is full, so the draft can't be kept across a refresh. Publish now or remove a picture." });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [draft, dirty, pub.ready]);
+
+  // an error message belongs to the state that caused it: editing clears it; signing in clears the "open rules" warning
+  useEffect(() => { setMsg((m) => (m && m.kind === "error" ? null : m)); }, [draft && draft.cards]);
+  useEffect(() => { if (user) setUnauth(false); }, [user]);
+
+  if (!draft) return <div className="we-loading">Loading cards…</div>;
+
+  const cards = draft.cards, card = cards.find((c) => c.id === selId) || cards[0] || null, idx = card ? cards.findIndex((c) => c.id === card.id) : -1;
+  const previewCards = normalizeWorkCards(cards);
+  const mutate = (fn) => setDraft((d) => ({ ...d, cards: fn(d.cards) }));
+  const updateCard = (id, fn) => mutate((cs) => cs.map((c) => (c.id === id ? fn(jsonClone(c)) : c)));
+  const move = (id, dir) => mutate((cs) => { const a = cs.slice(), i = a.findIndex((c) => c.id === id), j = i + dir; if (j < 0 || j >= a.length) return cs; [a[i], a[j]] = [a[j], a[i]]; return a; });
+  const addCard = (template) => { const c = newWorkCard(template); mutate((cs) => (cs.length >= WORK_LIMITS.maxCards ? cs : [...cs, c])); setSelId(c.id); setTab("content"); setAddOpen(false); };
+  const duplicate = (c) => { const copy = jsonClone(c); copy.id = "card-" + Math.random().toString(36).slice(2, 8); copy.visible = false; copy.content.title = (copy.content.title + " (copy)").slice(0, WORK_LIMITS.title); copy.appearance.image = emptyWorkImage(); mutate((cs) => { const a = cs.slice(); a.splice(cs.findIndex((x) => x.id === c.id) + 1, 0, copy); return a; }); setSelId(copy.id); };
+  const remove = (c) => { if (!window.confirm(`Delete “${c.content.title || "this card"}”? It stays on the live site until you publish.`)) return; mutate((cs) => cs.filter((x) => x.id !== c.id)); setDraft((d) => { const im = { ...d.images }; delete im[c.id]; return { ...d, images: im }; }); setSelId(null); };
+  const resetCard = (c) => {
+    const def = defaultWorkCards().find((d) => d.id === c.id);
+    if (def) { if (!window.confirm("Reset this card's content and appearance to the original?")) return; updateCard(c.id, () => def); }
+    else { if (!window.confirm("Reset this card's appearance to its template defaults?")) return; updateCard(c.id, (x) => { const t = WORK_TEMPLATES[x.appearance.template]; x.appearance = { template: x.appearance.template, accent: t.colors.accent, background: t.colors.background, labels: {}, image: emptyWorkImage() }; return x; }); }
+  };
+  const restoreAll = () => { if (!window.confirm("Replace ALL cards in your draft with the two original ones?")) return; setDraft((d) => ({ ...d, cards: defaultWorkCards(), images: {} })); setSelId(defaultWorkCards()[0].id); };
+  const discard = () => { if (!window.confirm("Discard your draft and go back to what is published?")) return; setDraft({ cards: jsonClone(pub.cards), images: {}, baseUpdatedAt: pub.updatedAt }); removeLS(WORK_DRAFT_KEY); setSavedAt(null); setMsg(null); setSelId(pub.cards[0] ? pub.cards[0].id : null); };
+
+  const onUpload = async (file) => {
+    if (!card) return;
+    setUploadState({ kind: "info", text: "Shrinking picture…" });
+    try {
+      const { data, width, height } = await compressWorkImage(file);
+      const hash = hashStr(data), id = card.id;
+      setDraft((d) => ({ ...d, images: { ...d.images, [id]: data } }));
+      updateCard(id, (x) => { x.appearance.image = { ...x.appearance.image, kind: "upload", url: "", ref: "workimg-" + id, hash, zoom: 1, x: 50, y: 50 }; return x; });
+      setUploadState({ kind: "info", text: `Ready · ${width}×${height}px · ${Math.round(data.length * 0.75 / 1024)} KB` });
+    } catch (e) { setUploadState({ kind: "error", text: e.message }); }
+  };
+  const onRemoveImage = () => { if (!card) return; updateCard(card.id, (x) => { x.appearance.image = { ...emptyWorkImage(), alt: x.appearance.image.alt }; return x; }); setDraft((d) => { const im = { ...d.images }; delete im[card.id]; return { ...d, images: im }; }); setUploadState(null); };
+
+  const publish = async () => {
+    if (busy) return;
+    const list = normalizeWorkCards(cards);
+    const bad = list.map((c) => ({ c, v: validateWorkCard(c) })).filter((x) => x.v.errors.length);
+    if (bad.length) { setMsg({ kind: "error", text: "Fix before publishing — " + bad.map((b) => `“${b.c.content.title || b.c.id}”: ${b.v.errors[0]}`).join(" · ") }); setSelId(bad[0].c.id); return; }
+    const isUp = (c) => c.appearance.template === "image" && c.appearance.image.kind === "upload";
+    const images = {};
+    for (const c of list.filter(isUp)) {
+      const im = c.appearance.image, prev = pub.cards.find((p) => p.id === c.id);
+      const same = prev && isUp(prev) && prev.appearance.image.hash === im.hash && prev.appearance.image.ref === im.ref;
+      if (same) continue;
+      if (!draft.images[c.id]) { setMsg({ kind: "error", text: `The picture for “${c.content.title}” isn't in this browser any more — upload it again.` }); setSelId(c.id); return; }
+      images[im.ref] = { data: draft.images[c.id], hash: im.hash };
+    }
+    const keep = new Set(list.filter(isUp).map((c) => c.appearance.image.ref));
+    const removeRefs = pub.cards.filter(isUp).map((p) => p.appearance.image.ref).filter((r) => !keep.has(r));
+    setBusy(true); setMsg(null);
+    try {
+      const { updatedAt } = await store.publish({ cards: list, images, removeRefs });
+      setPub({ ready: true, cards: list, updatedAt, hasDoc: true, error: null });
+      setDraft((d) => ({ ...d, baseUpdatedAt: updatedAt }));
+      removeLS(WORK_DRAFT_KEY); writeJsonLS(WORK_CACHE_KEY, { updatedAt, cards: list }); setSavedAt(null);
+      setUnauth(user === null);
+      setMsg({ kind: "ok", text: "Published. Visitors see these cards now; pages that are already open update by themselves." });
+    } catch (e) {
+      const code = e && e.code, text = String((e && e.message) || e);
+      if (code === "permission-denied") { setMsg({ kind: "error", help: true, text: "Firebase refused the write. Sign in (top right) — your Firestore rules require it — then publish again. Your draft is safe." }); askSignIn(); }
+      else if (code === "firebase-disabled") setMsg({ kind: "error", text: text + " Your draft is safe." });
+      else if (text === "timeout") setMsg({ kind: "error", text: "No answer from Firebase within 25 seconds. Your draft is safe. If your connection returns, the publish may still complete — check the status before retrying." });
+      else setMsg({ kind: "error", text: "Publishing failed: " + text + " Your draft is safe." });
+    } finally { setBusy(false); }
+  };
+
+  const validations = card ? validateWorkCard(normalizeWorkCard(card, idx)) : { errors: [], warnings: [] };
+  return (
+    <div className="we">
+      <div className="we-bar">
+        <div className="we-state">
+          {!pub.ready ? <span className="we-chip">Loading…</span> : dirty ? <span className="we-chip draft">● Unpublished changes</span> : <span className="we-chip ok">✓ Everything is published</span>}
+          <span className="we-meta">
+            {dirty ? (savedAt ? `Draft saved in this browser ${fmtTime(savedAt)} — only you can see it` : "Saving draft in this browser…") : pub.updatedAt ? `Last published ${fmtTime(pub.updatedAt)}` : pub.hasDoc ? "" : "Nothing published yet — visitors see the original two cards"}
+          </span>
+        </div>
+        <div className="we-actions">
+          <button type="button" className="we-btn" onClick={() => { if (!writeJsonLS(WORK_DRAFT_KEY, { v: 1, savedAt: Date.now(), baseUpdatedAt: draft.baseUpdatedAt, cards: draft.cards, images: draft.images })) setMsg({ kind: "error", text: "This browser's storage is full — the draft couldn't be saved." }); else { setSavedAt(Date.now()); setMsg({ kind: "ok", text: "Draft saved in this browser." }); } }} disabled={!dirty}>Save draft</button>
+          <button type="button" className="we-btn" onClick={discard} disabled={!dirty}>Discard changes</button>
+          <button type="button" className="we-btn primary" onClick={publish} disabled={!dirty || busy || !pub.ready}>{busy ? "Publishing…" : "Publish"}</button>
+        </div>
+      </div>
+      {pub.error && <div className="we-note warn">{pub.error}</div>}
+      {conflict && <div className="we-note warn">The published cards changed after you started this draft (published {pub.updatedAt ? fmtTime(pub.updatedAt) : "elsewhere"}). Publishing will replace them with your draft. Use “Discard changes” to start from the published version instead.</div>}
+      {unauth && <div className="we-note warn">That publish worked without signing in, which means anyone who knows your Firebase settings can publish to your site.<SecuringHelp /></div>}
+      {msg && <div className={`we-note ${msg.kind}`} role="status">{msg.text}{msg.help && <SecuringHelp />}</div>}
+
+      <div className="we-grid">
+        <aside className="we-list" aria-label="Cards">
+          <div className="we-listhead"><strong>Cards</strong><span>{cards.length}/{WORK_LIMITS.maxCards}</span></div>
+          {cards.map((c, i) => (
+            <button type="button" key={c.id} className={`we-item${card && c.id === card.id ? " on" : ""}${c.visible ? "" : " hidden"}`} onClick={() => { setSelId(c.id); setDialogOpen(false); }}>
+              <span className="we-itemtop"><span className="we-order">{i + 1}</span><span className="we-itemtitle">{c.content.title || "Untitled"}</span></span>
+              <span className="we-itemmeta">{WORK_TEMPLATES[c.appearance.template].name}{c.visible ? "" : " · hidden"}</span>
+            </button>
+          ))}
+          {!cards.length && <p className="we-help">No cards. The Selected work section is hidden on the homepage.</p>}
+          <div className="we-addwrap">
+            <button type="button" className="we-btn" aria-expanded={addOpen} onClick={() => setAddOpen((o) => !o)} disabled={cards.length >= WORK_LIMITS.maxCards}>+ Add card</button>
+            {addOpen && <div className="we-menu" role="menu">{WORK_TEMPLATE_ORDER.map((t) => <button type="button" role="menuitem" key={t} onClick={() => addCard(t)}>{WORK_TEMPLATES[t].name}</button>)}</div>}
+          </div>
+          <button type="button" className="we-link" onClick={restoreAll}>Restore the original cards</button>
+        </aside>
+
+        <section className="we-form" aria-label="Edit card">
+          {card ? (
+            <>
+              <div className="we-formhead">
+                <h3>{card.content.title || "Untitled"}</h3>
+                <div className="we-row">
+                  <button type="button" className="we-mini" disabled={idx <= 0} onClick={() => move(card.id, -1)} aria-label="Move card up">↑ Up</button>
+                  <button type="button" className="we-mini" disabled={idx >= cards.length - 1} onClick={() => move(card.id, 1)} aria-label="Move card down">↓ Down</button>
+                  <button type="button" className="we-mini" onClick={() => duplicate(card)}>Duplicate</button>
+                  <button type="button" className="we-mini" onClick={() => resetCard(card)}>Reset</button>
+                  <button type="button" className="we-mini danger" onClick={() => remove(card)}>Delete</button>
+                </div>
+              </div>
+              <div className="we-tabs" role="tablist">
+                {["content", "appearance"].map((t) => <button type="button" role="tab" aria-selected={tab === t} key={t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t === "content" ? "Content" : "Appearance"}</button>)}
+              </div>
+              {validations.errors.map((e, i) => <p className="we-error" key={i}>✕ {e}</p>)}
+              {tab === "content"
+                ? <WorkContentForm card={card} onChange={(fn) => updateCard(card.id, fn)} />
+                : <WorkAppearanceForm card={card} images={draft.images} onChange={(fn) => updateCard(card.id, fn)} onUpload={onUpload} onRemoveImage={onRemoveImage} uploadState={uploadState} />}
+            </>
+          ) : <p className="we-help">Select a card, or add one.</p>}
+        </section>
+
+        <section className="we-preview" aria-label="Live preview">
+          <div className="we-previewhead">
+            <strong>Live preview</strong>
+            <div className="we-seg" role="group" aria-label="Preview size">
+              {[["desktop", "Desktop"], ["mobile", "Mobile"]].map(([k, l]) => <button type="button" key={k} className={device === k ? "on" : ""} aria-pressed={device === k} onClick={() => setDevice(k)}>{l}</button>)}
+            </div>
+            <button type="button" className="we-mini" disabled={!card || !card.visible} onClick={() => setDialogOpen((o) => !o)}>{dialogOpen ? "Close case study" : "Show case study"}</button>
+          </div>
+          <p className="we-help">Shows your draft exactly as visitors would see it after publishing{card && !card.visible ? " — this card is hidden, so it isn't shown." : "."} Click a card to open its case study.</p>
+          <WorkPreview cards={previewCards} images={draft.images} selectedId={card ? card.id : null} onSelect={setSelId} device={device} dialogOpen={dialogOpen && !!card} setDialogOpen={setDialogOpen} />
+          {validations.warnings.length > 0 && <ul className="we-warnlist">{validations.warnings.map((w, i) => <li key={i}>⚠ {w}</li>)}</ul>}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function SecuringHelp() {
+  return (
+    <details className="we-details">
+      <summary>How to lock publishing to your account</summary>
+      <ol>
+        <li>Firebase console → Build → Authentication → Get started → turn on <b>Email/Password</b>, then <b>Users → Add user</b> with your own email and a strong password.</li>
+        <li>Firebase console → Firestore Database → <b>Rules</b>: replace the rules with the block below (use your email) and press <b>Publish</b>.</li>
+        <li>Back here, choose <b>Sign in to publish</b> (top right) and use that email and password.</li>
+      </ol>
+      <pre className="we-pre">{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /siteContent/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.token.email == 'YOUR-EMAIL@example.com';
+    }
+  }
+}`}</pre>
+      <p>Visitors can still read the site; only that account can change it. This also protects the About and Contact page editors, which write to the same collection.</p>
+    </details>
+  );
+}
+
+// Publishing account (Firebase Auth, email + password) — shown on every admin tab because
+// signing in also covers the About / Contact page editors.
+function AdminAccount({ user, open, setOpen }) {
+  const [email, setEmail] = useState(""), [pw, setPw] = useState(""), [err, setErr] = useState(null), [busy, setBusy] = useState(false);
+  const auth = getWorkStore().auth;
+  const go = async (e) => {
+    e.preventDefault(); setBusy(true); setErr(null);
+    try { await auth.signIn(email.trim(), pw); setPw(""); setOpen(false); }
+    catch (x) { setErr(/invalid|wrong|credential|user-not-found/i.test(String((x && (x.code || x.message)) || "")) ? "Wrong email or password." : "Couldn't sign in: " + String((x && (x.code || x.message)) || x)); }
+    finally { setBusy(false); }
+  };
+  if (user) return <span className="we-acct">Signed in as <b>{user.email}</b> <button type="button" className="we-link" onClick={() => auth.signOut()}>Sign out</button></span>;
+  return (
+    <span className="we-acct">
+      <button type="button" className="we-link" aria-expanded={open} onClick={() => setOpen(!open)}>Sign in to publish</button>
+      {open && (
+        <form className="we-pop" onSubmit={go}>
+          <strong>Publishing account</strong>
+          <input type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" />
+          <input type="password" required placeholder="Password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" />
+          {err && <span className="we-error">{err}</span>}
+          <button type="submit" className="we-btn primary" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+          <span className="we-help">A Firebase Authentication user (Email/Password). Only needed once your Firestore rules require sign-in.</span>
+        </form>
+      )}
+    </span>
+  );
+}
+
 const TABS = [
+  { id: "work", label: "Selected work" },
   { id: "general", label: "General" },
-  { id: "journey", label: "Journey" },
-  { id: "news", label: "News" },
-  { id: "projects", label: "Projects" },
-  { id: "about", label: "About" },
-  { id: "contact", label: "Contact" },
+  { id: "about", label: "About page" },
+  { id: "contact", label: "Contact page" },
 ];
 
 function useAdminGate() {
@@ -2125,7 +2651,9 @@ function AdminSection() {
 
   const [mode, setMode] = useState(MODES[0].code);
   const [draft, setDraft] = useState(() => getEditableContent(mode));
-  const [tab, setTab] = useState("general");
+  const [tab, setTab] = useState("work");
+  const user = useWorkAuth();
+  const [signInOpen, setSignInOpen] = useState(false);
   const [status, setStatus] = useState(null);
 
   useEffect(() => {
@@ -2189,19 +2717,29 @@ function AdminSection() {
     <div className="rpa-root">
       <GlobalStyles />
       <AdminStyles />
+      {tab === "work" && <style>{MR_CSS}</style>}
       <header className="rpa-nav">
         <div className="rpa-nav-bar">
           <Link className="rpa-brand" to="/"><Logo size={22} markOnly />Admin</Link>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <select value={mode} onChange={(e) => setMode(e.target.value)} style={{ fontFamily: "'JetBrains Mono', monospace", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--rpa-line)" }}>
-              {MODES.map((m) => <option key={m.code} value={m.code}>{m.label}</option>)}
-            </select>
+            <AdminAccount user={user} open={signInOpen} setOpen={setSignInOpen} />
+            {tab !== "work" && (
+              <select value={mode} onChange={(e) => setMode(e.target.value)} aria-label="Which copy to edit" style={{ fontFamily: "'JetBrains Mono', monospace", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--rpa-line)" }}>
+                {MODES.map((m) => <option key={m.code} value={m.code}>{m.label}</option>)}
+              </select>
+            )}
             <Link to="/" className="rpa-btn" style={{ padding: "8px 16px" }}>View site</Link>
           </div>
         </div>
       </header>
 
-      <div className="rpa-wrap" style={{ padding: "28px 28px 40px" }}>
+      <div className="rpa-wrap" style={{ padding: "28px 28px 40px", maxWidth: tab === "work" ? 1560 : undefined }}>
+        {ADMIN_PASSPHRASE === "changeme" && (
+          <div className="adm-banner">
+            The admin passphrase is still the default <code>changeme</code>. Change <code>ADMIN_PASSPHRASE</code> in App.jsx. Note that it only hides this page — real protection for publishing is Firebase sign-in.
+            <SecuringHelp />
+          </div>
+        )}
         {!FIREBASE_ENABLED && (
           <div className="adm-banner">
             Firebase isn't connected yet (<code>FIREBASE_ENABLED = false</code> in App.jsx). Edits here save to this browser only, so they won't show up for other visitors or on other devices. See README.md to connect Firestore so saves go live everywhere.
@@ -2241,43 +2779,7 @@ function AdminSection() {
           </div>
         )}
 
-        {(tab === "journey" || tab === "news" || tab === "projects") && (
-          <div className="adm-banner">
-            The homepage now comes from the MagicPath design (the <code>MatsHomepage</code> block in <code>App.jsx</code>), so this tab no longer changes it. It still edits the stored copy used by the legacy homepage code in this file.
-          </div>
-        )}
-
-        {tab === "journey" && (
-          <div className="adm-panel">
-            {STAGE_META.map((s) => (
-              <details className="adm-stage" key={s.id}>
-                <summary>{draft.stages[s.id].title} <span className="adm-muted">({s.id})</span></summary>
-                <div style={{ padding: "16px 4px 4px", display: "flex", flexDirection: "column", gap: 16 }}>
-                  <TextField label="Kicker (e.g. STAGE 01 / 08)" value={draft.stages[s.id].kicker} onChange={(v) => set(["stages", s.id, "kicker"], v)} />
-                  <TextField label="Title" value={draft.stages[s.id].title} onChange={(v) => set(["stages", s.id, "title"], v)} />
-                  <TextAreaField label="Summary" value={draft.stages[s.id].summary} onChange={(v) => set(["stages", s.id, "summary"], v)} />
-                  <HeadingBodyListEditor label="Blocks (the sub-sections under this stage)" items={draft.stages[s.id].blocks} onChange={(v) => set(["stages", s.id, "blocks"], v)} />
-                </div>
-              </details>
-            ))}
-          </div>
-        )}
-
-        {tab === "news" && (
-          <div className="adm-panel">
-            <TextField label="Section kicker" value={draft.news.kicker} onChange={(v) => set(["news", "kicker"], v)} />
-            <TextField label="Section heading" value={draft.news.heading} onChange={(v) => set(["news", "heading"], v)} />
-            <NewsListEditor items={draft.news.items} onChange={(v) => set(["news", "items"], v)} />
-          </div>
-        )}
-
-        {tab === "projects" && (
-          <div className="adm-panel">
-            <TextField label="Section kicker" value={draft.projects.kicker} onChange={(v) => set(["projects", "kicker"], v)} />
-            <TextField label="Section heading" value={draft.projects.heading} onChange={(v) => set(["projects", "heading"], v)} />
-            <ProjectsListEditor items={draft.projects.items} onChange={(v) => set(["projects", "items"], v)} />
-          </div>
-        )}
+        {tab === "work" && <WorkAdmin user={user} askSignIn={() => setSignInOpen(true)} />}
 
         {tab === "about" && (
           <div className="adm-panel">
@@ -2316,7 +2818,7 @@ function AdminSection() {
         )}
       </div>
 
-      <div className="adm-savebar">
+      {tab !== "work" && <div className="adm-savebar">
         <div className="rpa-wrap adm-savebar-inner">
           <span className={`adm-status ${status?.type ?? ""}`}>{status?.message ?? " "}</span>
           <div style={{ display: "flex", gap: 10 }}>
@@ -2324,7 +2826,7 @@ function AdminSection() {
             <button className="rpa-btn solid" onClick={handleSave}>Save changes</button>
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -2333,6 +2835,548 @@ function AdminSection() {
 // Root router — mounted by main.jsx inside a <HashRouter>. This is the only
 // thing main.jsx imports from this file.
 // =====================================================================================
+// =====================================================================================
+// SELECTED WORK — editable project cards
+//
+// Three layers, kept apart on purpose:
+//   1. DATA        — a card is plain JSON: { content, appearance }. `content` is what it says;
+//                    `appearance` is which template it uses, two colours, the template's
+//                    labels and (for the image template) a crop. No markup, no CSS.
+//   2. TEMPLATES   — ArtWorkflow / ArtAnswer / ArtDashboard / ArtImage. They are given labels,
+//                    colours and image settings and nothing else. Typography, spacing and
+//                    responsive behaviour live in MR_CSS and cannot be changed from the data,
+//                    so no setting can break the layout.
+//   3. PERSISTENCE — the PUBLISHED copy is the Firestore document siteContent/work (what every
+//                    visitor sees). The DRAFT lives in this browser's localStorage (only the
+//                    editor sees it) until it is published. Uploaded images are stored as
+//                    siteContent/workimg-<cardId> documents (one per image) because Firebase
+//                    Storage needs a paid plan.
+// =====================================================================================
+
+const WORK_LIMITS = { category: 48, title: 90, description: 240, linkLabel: 32, heading: 40, body: 420, alt: 140, url: 300, maxSections: 5, maxCards: 12 };
+const WORK_IMAGE_MAX_CHARS = 450000; // compressed image (as a data: URL) target; Firestore documents are limited to 1 MiB
+
+const WORK_PALETTES = [
+  { name: "Blue", accent: "#7994CA", background: "#EDF2FB" },
+  { name: "Warm", accent: "#B28E61", background: "#F3EEE7" },
+  { name: "Mint", accent: "#5E9C86", background: "#E8F3EE" },
+  { name: "Slate", accent: "#64748B", background: "#EEF1F5" },
+  { name: "Rose", accent: "#B8707F", background: "#F7ECEE" },
+  { name: "Sand", accent: "#A08A5B", background: "#F6F1E4" },
+];
+
+// Each template lists the labels it exposes (with their built-in default text and a hard length
+// limit) and its default colour pair. A card whose colours equal its template's pair is drawn
+// with the original hand-tuned CSS colours; any other pair is derived (see workArtVars).
+const WORK_TEMPLATES = {
+  workflow: {
+    name: "Workflow diagram", hint: "Input → validation → action",
+    colors: { accent: "#7994CA", background: "#EDF2FB" },
+    labels: [
+      { key: "flow", name: "Top label", def: "INPUT → VALIDATION → ACTION", max: 44 },
+      { key: "inputTitle", name: "Input title", def: "Invoice received", max: 28 },
+      { key: "inputCode", name: "Input reference", def: "INV-1042", max: 16 },
+      { key: "okTitle", name: "Result 1 title", def: "Validated", max: 22 },
+      { key: "okNote", name: "Result 1 note", def: "Rules matched", max: 30 },
+      { key: "exTitle", name: "Result 2 title", def: "Review queue", max: 22 },
+      { key: "exNote", name: "Result 2 note", def: "Exceptions to a person", max: 32 },
+    ],
+  },
+  answer: {
+    name: "AI answer panel", hint: "Question, traceable answer, source",
+    colors: { accent: "#B28E61", background: "#F3EEE7" },
+    labels: [
+      { key: "flow", name: "Top label", def: "EVIDENCE → ANSWER", max: 44 },
+      { key: "question", name: "Question", def: "What is the approval policy?", max: 56 },
+      { key: "answerTitle", name: "Answer headline", def: "An answer you can trace.", max: 40 },
+      { key: "answerText", name: "Answer text (2 lines)", def: "Grounded in the relevant policy.\nReviewed before action.", max: 120, multiline: true },
+      { key: "source", name: "Source", def: "Source 01 · Approval policy", max: 44 },
+      { key: "footer", name: "Footer note (empty hides it)", def: "Human approval required", max: 40 },
+    ],
+  },
+  dashboard: {
+    name: "Dashboard", hint: "Three metrics and a trend line",
+    colors: { accent: "#7994CA", background: "#EDF2FB" },
+    labels: [
+      { key: "flow", name: "Top label", def: "RUNS → CHECKS → INSIGHT", max: 44 },
+      { key: "m1Label", name: "Metric 1 label", def: "Runs", max: 14 },
+      { key: "m1Value", name: "Metric 1 value", def: "24", max: 8 },
+      { key: "m2Label", name: "Metric 2 label", def: "Passed", max: 14 },
+      { key: "m2Value", name: "Metric 2 value", def: "23", max: 8 },
+      { key: "m3Label", name: "Metric 3 label", def: "Errors", max: 14 },
+      { key: "m3Value", name: "Metric 3 value", def: "1", max: 8 },
+      { key: "footnote", name: "Footnote", def: "EXAMPLE DATA", max: 24 },
+    ],
+  },
+  image: {
+    name: "Uploaded image", hint: "Your own picture, cropped to the card",
+    colors: { accent: "#7994CA", background: "#EDF2FB" },
+    labels: [{ key: "flow", name: "Top label (optional)", def: "", max: 44 }],
+  },
+};
+const WORK_TEMPLATE_ORDER = ["workflow", "answer", "dashboard", "image"];
+
+const emptyWorkImage = () => ({ kind: "none", url: "", ref: "", hash: "", alt: "", zoom: 1, x: 50, y: 50 });
+
+// The two cards the site launched with. Used until something is published, and by "Reset".
+function defaultWorkCards() {
+  return [
+    {
+      id: "invoice-to-record", visible: true,
+      content: {
+        category: "RPA · SYSTEM INTEGRATION",
+        title: "From invoice to verified record.",
+        description: "A workflow that connects legacy systems, validates the details, and hands exceptions to a person.",
+        linkLabel: "Explore the approach", illustrative: true,
+        sections: [
+          { heading: "The problem", body: "How can invoice data move between disconnected systems without adding another manual queue?" },
+          { heading: "The approach", body: "Validate required fields, match the purchase order, and update the destination system. Keep mismatches in a review queue with the relevant context." },
+          { heading: "What to measure", body: "Compare handling time and error rates with the manual baseline. Report exceptions separately from successful automated runs." },
+        ],
+        link: { label: "", url: "" },
+      },
+      appearance: { template: "workflow", accent: "#7994CA", background: "#EDF2FB", labels: {}, image: emptyWorkImage() },
+    },
+    {
+      id: "useful-answers", visible: true,
+      content: {
+        category: "AGENTIC AI · KNOWLEDGE RETRIEVAL",
+        title: "Useful answers. Visible evidence.",
+        description: "An assistant that finds relevant information, shows its sources, and knows when to ask for help.",
+        linkLabel: "Explore the approach", illustrative: true,
+        sections: [
+          { heading: "The problem", body: "How can a team find reliable answers across internal documents without losing the source of the information?" },
+          { heading: "The approach", body: "Retrieve relevant passages before generating an answer. Show citations and abstain when the evidence is incomplete. Require approval before any consequential action." },
+          { heading: "What to measure", body: "Evaluate retrieval relevance, answer faithfulness, escalation quality, latency, and cost on a representative test set." },
+        ],
+        link: { label: "", url: "" },
+      },
+      appearance: { template: "answer", accent: "#B28E61", background: "#F3EEE7", labels: {}, image: emptyWorkImage() },
+    },
+  ];
+}
+
+function newWorkCard(template) {
+  const t = WORK_TEMPLATES[template];
+  return {
+    id: "card-" + Math.random().toString(36).slice(2, 8), visible: false,
+    content: {
+      category: "CATEGORY · TOPIC", title: "New project", description: "", linkLabel: "Explore the approach", illustrative: true,
+      sections: [{ heading: "The problem", body: "" }, { heading: "The approach", body: "" }, { heading: "What to measure", body: "" }],
+      link: { label: "", url: "" },
+    },
+    appearance: { template, accent: t.colors.accent, background: t.colors.background, labels: {}, image: emptyWorkImage() },
+  };
+}
+
+// ---- colour helpers ---------------------------------------------------------------
+const hexRgb = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+const rgbHex = (r, g, b) => "#" + [r, g, b].map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")).join("").toUpperCase();
+const mixHex = (a, b, t) => { const A = hexRgb(a), B = hexRgb(b); return rgbHex(A[0] * t + B[0] * (1 - t), A[1] * t + B[1] * (1 - t), A[2] * t + B[2] * (1 - t)); };
+const hexLum = (h) => { const c = hexRgb(h).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+const contrastRatio = (a, b) => { const [hi, lo] = [hexLum(a), hexLum(b)].sort((p, q) => q - p); return (hi + 0.05) / (lo + 0.05); };
+const sameHex = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+
+// The colour tokens a template's CSS reads. Returns undefined for a template's own default pair,
+// so default cards keep the original hand-tuned colours (the CSS fallbacks) exactly.
+function workArtVars(ap) {
+  const tpl = WORK_TEMPLATES[ap.template];
+  if (sameHex(ap.accent, tpl.colors.accent) && sameHex(ap.background, tpl.colors.background)) return undefined;
+  const a = ap.accent, bg = ap.background;
+  return {
+    "--art-bg": bg, "--art-edge": mixHex(a, bg, 0.14), "--art-surface": mixHex("#FFFFFF", bg, 0.72), "--art-line": mixHex(a, bg, 0.26),
+    "--art-soft": mixHex(a, bg, 0.13), "--art-label": mixHex(a, "#172033", 0.78), "--art-ink": mixHex(a, "#172033", 0.5),
+    "--art-mute": mixHex(a, bg, 0.7), "--art-accent": a,
+  };
+}
+// Readability of a card's colours (only meaningful for custom pairs; the defaults are the original design).
+function workContrastWarnings(ap) {
+  const v = workArtVars(ap);
+  if (!v) return [];
+  const out = [];
+  if (contrastRatio(v["--art-ink"], v["--art-surface"]) < 4.5) out.push("Text on the panels will be hard to read — pick a darker accent or a lighter background.");
+  if (contrastRatio(v["--art-label"], v["--art-bg"]) < 2.8) out.push("The small top label will be hard to read against this background.");
+  if (contrastRatio(v["--art-accent"], v["--art-bg"]) < 1.8) out.push("Icons and lines will be barely visible — the accent is too close to the background.");
+  return out;
+}
+
+// ---- normalisation: any stored value -> a safe, well-formed card ----------------------
+const clipStr = (v, n) => (typeof v === "string" ? v : v == null ? "" : String(v)).slice(0, n);
+const clampNum = (v, lo, hi, fb) => { const n = v == null || v === "" ? NaN : Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : fb; };
+const isHex6 = (v) => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v);
+const safeHttpUrl = (u) => { const t = String(u || "").trim().slice(0, WORK_LIMITS.url); return /^https?:\/\/[^\s]+$/i.test(t) ? t : ""; };
+const safeImageUrl = (u) => {
+  const t = String(u || "").trim().slice(0, WORK_LIMITS.url);
+  if (/^https?:\/\/[^\s]+$/i.test(t)) return t;
+  return /^(\.\/|\/)?[\w\-./%]+\.(png|jpe?g|webp|gif|svg|avif)$/i.test(t) && !t.includes("..") ? t : "";
+};
+const workAssetUrl = (u) => (/^https?:/i.test(u) ? u : `${import.meta.env.BASE_URL}${u.replace(/^\.?\//, "")}`);
+
+function normalizeWorkImage(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const kind = r.kind === "upload" || r.kind === "url" ? r.kind : "none";
+  return {
+    kind, url: kind === "url" ? safeImageUrl(r.url) : "", ref: kind === "upload" ? clipStr(r.ref, 80) : "", hash: kind === "upload" ? clipStr(r.hash, 24) : "",
+    alt: clipStr(r.alt, WORK_LIMITS.alt), zoom: clampNum(r.zoom, 1, 3, 1), x: clampNum(r.x, 0, 100, 50), y: clampNum(r.y, 0, 100, 50),
+  };
+}
+
+function normalizeWorkCard(raw, i, opts) {
+  const keepEmpty = !!(opts && opts.keepEmpty);
+  const r = raw && typeof raw === "object" ? raw : {};
+  const c = r.content && typeof r.content === "object" ? r.content : {};
+  const a = r.appearance && typeof r.appearance === "object" ? r.appearance : {};
+  const template = WORK_TEMPLATES[a.template] ? a.template : "workflow";
+  const tpl = WORK_TEMPLATES[template];
+  const id = typeof r.id === "string" && /^[a-z0-9][a-z0-9-]{0,40}$/i.test(r.id) ? r.id : "card-" + (i + 1);
+  let sections = (Array.isArray(c.sections) ? c.sections : []).slice(0, WORK_LIMITS.maxSections)
+    .map((s) => ({ heading: clipStr(s && s.heading, WORK_LIMITS.heading), body: clipStr(s && s.body, WORK_LIMITS.body) }));
+  if (!keepEmpty) sections = sections.filter((s) => s.heading.trim() || s.body.trim());
+  const labels = {};
+  const allLabels = a.labels && typeof a.labels === "object" ? a.labels : {};
+  for (const t of WORK_TEMPLATE_ORDER) {
+    const ov = allLabels[t] && typeof allLabels[t] === "object" ? allLabels[t] : {};
+    const kept = {};
+    for (const f of WORK_TEMPLATES[t].labels) if (typeof ov[f.key] === "string" && clipStr(ov[f.key], f.max) !== f.def) kept[f.key] = clipStr(ov[f.key], f.max);
+    if (Object.keys(kept).length) labels[t] = kept;
+  }
+  return {
+    id, visible: r.visible !== false,
+    content: {
+      category: clipStr(c.category, WORK_LIMITS.category), title: clipStr(c.title, WORK_LIMITS.title), description: clipStr(c.description, WORK_LIMITS.description),
+      linkLabel: clipStr(c.linkLabel, WORK_LIMITS.linkLabel), illustrative: c.illustrative !== false, sections,
+      link: { label: clipStr(c.link && c.link.label, WORK_LIMITS.linkLabel), url: safeHttpUrl(c.link && c.link.url) },
+    },
+    appearance: {
+      template, accent: isHex6(a.accent) ? a.accent.toUpperCase() : tpl.colors.accent, background: isHex6(a.background) ? a.background.toUpperCase() : tpl.colors.background,
+      labels, image: template === "image" ? normalizeWorkImage(a.image) : emptyWorkImage(),
+    },
+  };
+}
+const normalizeWorkCards = (list, opts) => (Array.isArray(list) ? list.slice(0, WORK_LIMITS.maxCards).map((c, i) => normalizeWorkCard(c, i, opts)) : []);
+const workKey = (cards) => JSON.stringify(normalizeWorkCards(cards));
+
+function workLabels(card) {
+  const t = card.appearance.template, ov = card.appearance.labels[t] || {}, out = {};
+  for (const f of WORK_TEMPLATES[t].labels) out[f.key] = typeof ov[f.key] === "string" ? ov[f.key] : f.def;
+  return out;
+}
+
+// What stops a card from being published (errors) and what is worth a second look (warnings).
+function validateWorkCard(card) {
+  const errors = [], warnings = [], c = card.content, ap = card.appearance;
+  if (!c.title.trim()) errors.push("Title is required.");
+  if (ap.template === "image" && card.visible) {
+    if (ap.image.kind === "none") errors.push("Choose an image, or switch to another template.");
+    if (ap.image.kind === "url" && !ap.image.url) errors.push("The image address isn't valid — use https://… or a file in the site's public folder.");
+  }
+  if (c.link.url && !c.link.label.trim()) errors.push("Give the external link a label, or clear its address.");
+  if (ap.template === "image" && ap.image.kind !== "none" && !ap.image.alt.trim()) warnings.push("No image description — the title is used as the alt text.");
+  if (!c.description.trim()) warnings.push("No description.");
+  if (!c.illustrative) warnings.push("Illustrative labels are off: this card will be presented as real work.");
+  workContrastWarnings(ap).forEach((w) => warnings.push(w));
+  return { errors, warnings };
+}
+
+// ---- persistence ---------------------------------------------------------------------
+const WORK_DRAFT_KEY = "site-work-draft-v1";
+const WORK_CACHE_KEY = "site-work-published-v1";
+const readJsonLS = (k) => { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : null; } catch { return null; } };
+const writeJsonLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } };
+const removeLS = (k) => { try { localStorage.removeItem(k); } catch {} };
+const workTimeout = (p, ms, msg) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(msg || "timeout")), ms))]);
+
+async function workFirestore() {
+  const { initializeApp, getApps } = await import("firebase/app");
+  const fs = await import("firebase/firestore");
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  return { db: fs.getFirestore(app), fs, app };
+}
+
+// The only code that talks to Firebase for the work cards. Everything else goes through
+// getWorkStore(), so the editor and the homepage don't care where the data lives.
+const firebaseWorkStore = {
+  // Live published document (or null when nothing has been published yet).
+  subscribe(onDoc, onError) {
+    let off = () => {}, dead = false;
+    if (!FIREBASE_ENABLED) { setTimeout(() => !dead && onDoc(null), 0); return () => { dead = true; }; }
+    (async () => {
+      try {
+        const { db, fs } = await workFirestore();
+        if (dead) return;
+        off = fs.onSnapshot(fs.doc(db, "siteContent", "work"), (snap) => onDoc(snap.exists() ? snap.data() : null), (err) => onError(err));
+      } catch (e) { onError(e); }
+    })();
+    return () => { dead = true; off(); };
+  },
+  async loadImage(ref) {
+    if (!FIREBASE_ENABLED) return null;
+    const { db, fs } = await workFirestore();
+    const snap = await workTimeout(fs.getDoc(fs.doc(db, "siteContent", ref)), 15000);
+    return snap.exists() ? snap.data() : null;
+  },
+  // Images first, then the card list, so the published list never points at a missing image.
+  async publish({ cards, images, removeRefs }) {
+    if (!FIREBASE_ENABLED) throw Object.assign(new Error("Firebase is turned off in App.jsx (FIREBASE_ENABLED)."), { code: "firebase-disabled" });
+    const { db, fs } = await workFirestore();
+    const now = Date.now();
+    for (const [ref, v] of Object.entries(images)) await workTimeout(fs.setDoc(fs.doc(db, "siteContent", ref), { data: v.data, hash: v.hash, updatedAt: now }), 25000);
+    await workTimeout(fs.setDoc(fs.doc(db, "siteContent", "work"), { version: 1, updatedAt: now, cards }), 25000);
+    for (const ref of removeRefs) { try { await workTimeout(fs.deleteDoc(fs.doc(db, "siteContent", ref)), 8000); } catch {} }
+    return { updatedAt: now };
+  },
+  auth: {
+    watch(cb) {
+      let off = () => {}, dead = false;
+      (async () => {
+        try {
+          const { app } = await workFirestore();
+          const { getAuth, onAuthStateChanged } = await import("firebase/auth");
+          if (dead) return;
+          off = onAuthStateChanged(getAuth(app), (u) => cb(u ? { email: u.email || "signed in" } : null));
+        } catch { cb(null); }
+      })();
+      return () => { dead = true; off(); };
+    },
+    async signIn(email, password) {
+      const { app } = await workFirestore();
+      const { getAuth, signInWithEmailAndPassword } = await import("firebase/auth");
+      await signInWithEmailAndPassword(getAuth(app), email, password);
+    },
+    async signOut() {
+      const { app } = await workFirestore();
+      const { getAuth, signOut } = await import("firebase/auth");
+      await signOut(getAuth(app));
+    },
+  },
+};
+// Test builds (vite --mode test) can swap the store for an in-memory fake. In production builds
+// import.meta.env.MODE is "production", so this branch is removed entirely.
+function getWorkStore() {
+  if (import.meta.env.MODE === "test" && typeof window !== "undefined" && window.__MR_STORE__) return window.__MR_STORE__;
+  return firebaseWorkStore;
+}
+
+// Test builds only: expose the pure helpers so they can be unit-tested in a browser.
+if (import.meta.env.MODE === "test" && typeof window !== "undefined") {
+  window.__MR_TEST__ = { normalizeWorkCards, workKey, workArtVars, workContrastWarnings, validateWorkCard, defaultWorkCards, safeHttpUrl, safeImageUrl, contrastRatio, mixHex, workLabels, WORK_TEMPLATES };
+}
+
+// Public homepage: the published cards. Never shows the editor's draft.
+function usePublishedWork() {
+  const [state, setState] = useState(() => {
+    const cache = readJsonLS(WORK_CACHE_KEY);
+    return cache && Array.isArray(cache.cards) ? { status: "ready", cards: normalizeWorkCards(cache.cards) } : { status: "loading", cards: [] };
+  });
+  useEffect(() => {
+    const store = getWorkStore();
+    const fallback = () => setState((p) => (p.status === "ready" ? p : { status: "ready", cards: normalizeWorkCards(defaultWorkCards()) }));
+    const unsub = store.subscribe(
+      (doc) => {
+        if (doc && Array.isArray(doc.cards)) {
+          const cards = normalizeWorkCards(doc.cards);
+          writeJsonLS(WORK_CACHE_KEY, { updatedAt: doc.updatedAt || 0, cards });
+          setState({ status: "ready", cards });
+        } else {
+          removeLS(WORK_CACHE_KEY);
+          setState({ status: "ready", cards: normalizeWorkCards(defaultWorkCards()) });
+        }
+      },
+      (err) => { console.warn("Selected work: could not read the published cards, using the cached or built-in ones.", err); fallback(); }
+    );
+    const t = setTimeout(fallback, 3000);
+    return () => { clearTimeout(t); unsub(); };
+  }, []);
+  return state;
+}
+
+const workImageCache = new Map();
+// Resolves a card's image to something an <img> can show. `localImages` holds the editor's
+// not-yet-published uploads (cardId -> data URL); visitors never have it.
+function useWorkImageSrc(card, localImages) {
+  const im = card.appearance.image, enabled = card.appearance.template === "image";
+  const local = enabled && im.kind === "upload" && localImages && localImages[card.id];
+  const [remote, setRemote] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    setRemote(null);
+    if (!enabled || im.kind !== "upload" || local || !im.ref) return;
+    const key = im.ref + ":" + im.hash;
+    if (workImageCache.has(key)) { setRemote(workImageCache.get(key)); return; }
+    getWorkStore().loadImage(im.ref).then((d) => { if (d && d.data) { workImageCache.set(key, d.data); if (alive) setRemote(d.data); } }).catch(() => {});
+    return () => { alive = false; };
+  }, [enabled, im.kind, im.ref, im.hash, !!local]);
+  if (!enabled) return null;
+  if (im.kind === "url") return im.url ? workAssetUrl(im.url) : null;
+  if (im.kind === "upload") return local || remote;
+  return null;
+}
+
+// ---- rendering: templates (labels/colours/image in, markup out) -----------------------
+const textLines = (t) => String(t).split("\n").map((l, i, a) => <React.Fragment key={i}>{l}{i < a.length - 1 && <br />}</React.Fragment>);
+
+function WorkDocIcon({ size = 27 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2" y="2" width="7" height="6" rx="1" /><rect x="15" y="16" width="7" height="6" rx="1" /><path d="M5 8v11h10M9 5h10v11" />
+    </svg>
+  );
+}
+
+function ArtWorkflow({ L }) {
+  return (
+    <div className="mr-invoiceflow">
+      <div className="mr-invoice">
+        <span className="mr-doc"><WorkDocIcon size={27} /></span>
+        <strong>{L.inputTitle}</strong><span className="mr-invoiceline" /><span className="mr-invoiceline short" /><small>{L.inputCode}</small>
+      </div>
+      <span className="mr-flowarrow">→</span>
+      <div className="mr-resultcards">
+        <div><span>✓</span><strong>{L.okTitle}</strong><small>{L.okNote}</small></div>
+        <div><span>↗</span><strong>{L.exTitle}</strong><small>{L.exNote}</small></div>
+      </div>
+    </div>
+  );
+}
+
+function ArtAnswer({ L }) {
+  return (
+    <div className="mr-answer">
+      <div className="mr-answerquestion"><span>Q</span> {L.question}</div>
+      <div className="mr-answerbody">
+        <span className="mr-spark">✳</span>
+        <div><strong>{L.answerTitle}</strong><p>{textLines(L.answerText)}</p><span className="mr-source">↗ {L.source}</span></div>
+      </div>
+      {L.footer ? <div className="mr-approval"><i /> {L.footer} <span>✓</span></div> : null}
+    </div>
+  );
+}
+
+function ArtDashboard({ L }) {
+  const tiles = [[L.m1Label, L.m1Value], [L.m2Label, L.m2Value], [L.m3Label, L.m3Value]];
+  return (
+    <div className="mr-dash">
+      <svg viewBox="0 0 238 84" role="img" aria-label="A dashboard with three metrics and a trend line">
+        <rect className="dsh-panel" x="1" y="1" width="236" height="82" rx="6" />
+        {tiles.map(([label, value], i) => (
+          <g key={i}>
+            <rect className="dsh-tile" x={9 + i * 74} y="8" width="68" height="28" rx="3" />
+            <text className="dsh-label" x={15 + i * 74} y="19" fontSize="6">{label}</text>
+            <text className="dsh-value" x={15 + i * 74} y="31" fontSize="11" fontWeight="500">{value}</text>
+          </g>
+        ))}
+        <path className="dsh-grid" d="M12 50H226M12 63H226M12 74H226" />
+        <path className="dsh-line" d="M12 70 34 66 56 68 78 55 100 60 122 46 144 53 166 43 188 47 226 40" fill="none" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        {L.footnote ? <text className="dsh-note" x="226" y="79" textAnchor="end" fontSize="5">{L.footnote}</text> : null}
+      </svg>
+    </div>
+  );
+}
+
+function ArtImage({ src, image, title }) {
+  return (
+    <div className="mr-artimg">
+      {src ? <img src={src} alt={image.alt || title} style={{ objectPosition: `${image.x}% ${image.y}%`, transform: `scale(${image.zoom})`, transformOrigin: `${image.x}% ${image.y}%` }} /> : <span className="mr-artimg-empty">No image yet</span>}
+    </div>
+  );
+}
+
+function WorkArt({ card, localImages }) {
+  const ap = card.appearance, L = workLabels(card), src = useWorkImageSrc(card, localImages);
+  const cls = ["mr-projectart", ap.template === "answer" ? "mr-aiart" : "", ap.template === "image" ? "mr-art-image" : "", ap.template === "dashboard" ? "mr-art-dash" : ""].filter(Boolean).join(" ");
+  return (
+    <div className={cls} style={workArtVars(ap)} data-template={ap.template}>
+      {ap.template === "image" && <ArtImage src={src} image={ap.image} title={card.content.title} />}
+      <div className="mr-artlabel"><span>{L.flow}</span><span>{card.content.illustrative ? "ILLUSTRATIVE EXAMPLE" : ""}</span></div>
+      {ap.template === "workflow" && <ArtWorkflow L={L} />}
+      {ap.template === "answer" && <ArtAnswer L={L} />}
+      {ap.template === "dashboard" && <ArtDashboard L={L} />}
+    </div>
+  );
+}
+
+// ---- rendering: the card, the section, the dialog ------------------------------------
+function WorkCardView({ card, localImages, onOpen, selected }) {
+  const c = card.content;
+  return (
+    <button type="button" className={`mr-project${selected ? " is-selected" : ""}`} onClick={onOpen} data-card-id={card.id}>
+      <WorkArt card={card} localImages={localImages} />
+      <div className="mr-projectbody">
+        <span className="mr-kicker">{c.category}</span>
+        <h3>{c.title}<span>↗</span></h3>
+        <p>{c.description}</p>
+        <span className="mr-caseaction">{c.linkLabel || "Explore the approach"} <span>→</span></span>
+      </div>
+    </button>
+  );
+}
+
+function WorkSkeleton() {
+  return (
+    <div className="mr-project mr-skeleton" aria-hidden="true">
+      <div className="mr-projectart" />
+      <div className="mr-projectbody"><div className="mr-skelline w60" /><div className="mr-skelline" /><div className="mr-skelline w90" /></div>
+    </div>
+  );
+}
+
+function WorkSection({ cards, loading, localImages, onOpen, selectedId }) {
+  const n = cards.length, anyIllustrative = cards.some((c) => c.content.illustrative);
+  return (
+    <section className="mr-work" id="mr-work">
+      <div className="mr-sectionhead">
+        <div><div className="mr-kicker">01 / SELECTED WORK</div><h2>Make the work <em>work better.</em></h2></div>
+        {n === 2 ? <p>Two ways to turn a recurring problem<br />into a dependable system.</p> : <p>Turning recurring problems<br />into dependable systems.</p>}
+      </div>
+      <div className={`mr-workgrid${n === 1 ? " single" : ""}`}>
+        {loading ? <><WorkSkeleton /><WorkSkeleton /></> : cards.map((card) => <WorkCardView key={card.id} card={card} localImages={localImages} selected={selectedId === card.id} onOpen={(e) => onOpen(e, card)} />)}
+      </div>
+      {!loading && anyIllustrative && <p className="mr-example-note">Illustrative examples of how I approach the work. They are not client engagements or measured results.</p>}
+    </section>
+  );
+}
+
+// Overlay + dialog + focus handling, shared by the homepage and the editor's preview.
+function ModalShell({ kicker, title, onDismiss, closeRef, children }) {
+  const root = useRef(null), dismissRef = useRef(onDismiss);
+  dismissRef.current = onDismiss;
+  useEffect(() => {
+    const doc = root.current ? root.current.ownerDocument : document;
+    if (closeRef.current) closeRef.current.focus();
+    const f = (e) => { if (e.key === "Escape") dismissRef.current(); };
+    doc.addEventListener("keydown", f);
+    return () => doc.removeEventListener("keydown", f);
+  }, []);
+  return (
+    <div className="mr-overlay" ref={root} onClick={(e) => { if (e.target === e.currentTarget) dismissRef.current(); }}>
+      <section className="mr-modal" role="dialog" aria-modal="true" aria-labelledby="mr-dialogtitle" onKeyDown={(e) => {
+        if (e.key === "Tab") {
+          const els = e.currentTarget.querySelectorAll("button,a[href],input,textarea");
+          const first = els[0], last = els[els.length - 1], active = e.currentTarget.ownerDocument.activeElement;
+          if (e.shiftKey && active === first) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+        }
+      }}>
+        <button className="mr-close" ref={closeRef} onClick={() => dismissRef.current()} aria-label="Close dialog">×</button>
+        <div className="mr-kicker">{kicker}</div>
+        <h2 id="mr-dialogtitle">{title}</h2>
+        {children}
+      </section>
+    </div>
+  );
+}
+
+function CaseStudyBody({ card }) {
+  const c = card.content;
+  return (
+    <>
+      {c.sections.length ? c.sections.map((s, i) => <div key={i}><h3>{s.heading}</h3><p>{s.body}</p></div>) : <p>{c.description}</p>}
+      {c.link.url && <a className="mr-primary mr-modalcta mr-modallink" href={c.link.url} target="_blank" rel="noopener noreferrer">{c.link.label} <span>↗</span></a>}
+      {c.illustrative && <div className="mr-previewnotice">This example demonstrates the case-study layout. It does not claim a completed client engagement or measured result.</div>}
+    </>
+  );
+}
+
 // =====================================================================================
 // MagicPath homepage ("Mats Homepage" — project "Mats — Homepage Redesign", component
 // 459253902437670912, revision 459258501928206336), inlined here so the whole site stays
@@ -2348,7 +3392,7 @@ function AdminSection() {
 // clash with anything else in this file.
 // =====================================================================================
 const MR_CSS = String.raw`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
-.mr-app{--bg:#f8f7f3;--ink:#172033;--secondary:#586477;--blue:#3b60c5;--border:#dce2eb;font-family:Inter,sans-serif;color:var(--ink);background:var(--bg);min-height:100vh}.mr-app *{box-sizing:border-box}.mr-app button,.mr-app input{font:inherit}.mr-app button{cursor:pointer}.mr-app a{color:inherit;text-decoration:none}.mr-app :focus-visible{outline:3px solid #7694e1;outline-offset:5px}.mr-app section[id]{scroll-margin-top:30px}.mr-header{max-width:1272px;margin:auto;padding:27px 36px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e4e3de;gap:25px}.mr-brand{font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-1px;display:flex;align-items:center}.mr-logomark{font-family:monospace;font-size:24px;letter-spacing:-5px;color:var(--blue);margin-right:16px}.mr-period{color:var(--blue)}.mr-header nav{display:flex;gap:38px;font-size:13px;color:var(--secondary)}.mr-header nav a:hover{color:var(--blue)}.mr-headercta{border:1px solid #ccd4e0;padding:10px 17px;border-radius:5px;font-size:12px}.mr-headercta span{margin-left:27px;color:var(--blue)}.mr-app main{max-width:1200px;margin:auto;padding:0 24px}.mr-hero{display:grid;grid-template-columns:1.2fr 1fr;gap:45px;padding:76px 0 59px;align-items:center}.mr-kicker{font-family:Inter,sans-serif;font-size:9px;font-weight:500;letter-spacing:1.6px;color:#697588;display:flex;align-items:center;gap:9px}.mr-kicker>i{width:5px;height:5px;background:#bd8c5f;border-radius:50%}.mr-hero h1{font-family:'Space Grotesk',sans-serif;font-size:55px;line-height:1.13;letter-spacing:-2.4px;font-weight:500;margin:24px 0}.mr-app em{font-style:normal;color:var(--blue)}.mr-herocopy>p{font-size:15px;line-height:1.85;color:var(--secondary);max-width:465px}.mr-actions{display:flex;gap:23px;align-items:center;margin-top:28px}.mr-primary{display:inline-flex;align-items:center;justify-content:space-between;gap:24px;padding:14px 18px;background:var(--blue);color:#fff!important;border-radius:5px;font-size:12px}.mr-primary:hover{background:#2b4ca9}.mr-textlink{font-size:11px;display:flex;gap:13px;color:var(--secondary)!important}.mr-heronote{display:flex;align-items:center;gap:12px;margin-top:30px;font-size:10px;color:#737d87}.mr-heronote>span{font-size:19px;font-weight:400;color:#bf956f}.mr-system{background:#eff2f8;border:1px solid #dbe2ef;border-radius:12px;overflow:hidden;box-shadow:0 17px 33px #2d436b06}.mr-systemtop{display:flex;align-items:center;justify-content:space-between;padding:17px 20px 0;color:#7184a4;font-size:8px;letter-spacing:1.3px}.mr-systemtop button{border:1px solid #cfdaee;border-radius:5px;width:25px;height:25px;background:#f7f9fe;font-size:11px;color:#617dac}.mr-systemtitle{display:flex;justify-content:space-between;align-items:center;padding:12px 20px 0;color:#405a8b;font-size:13px}.mr-systemtitle small{font-family:monospace;font-size:8px;color:#8192af}.mr-diagram{position:relative;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr;height:255px;padding:16px 14px 0;background-image:radial-gradient(#c4cfe4 .7px,transparent .7px);background-size:18px 18px}.mr-connections{position:absolute;inset:0;width:100%;height:100%}.mr-node{z-index:1;align-self:center;justify-self:center;display:flex;align-items:center;flex-direction:column;gap:10px}.mr-node>span{width:48px;height:48px;border:1px solid #ced9ed;background:#f8faff;border-radius:12px;color:#6884bd;display:grid;place-items:center;transition:background .3s,color .3s}.mr-node small{font-size:9px;color:#6880a7}.mr-node.active>span{background:var(--blue);color:white;border-color:var(--blue);box-shadow:0 0 0 5px #dce5f9}.mr-node.active small{color:var(--blue);font-weight:600}.mr-systemstatus{padding:13px 20px;border-top:1px solid #dbe3f0;font-size:9px;display:flex;flex-direction:column;gap:8px;min-height:64px;color:#4f6b9e}.mr-systemstatus b{font-weight:400;margin:0 5px;color:#8297bb}.mr-systemstatus i{display:inline-block;background:#80a286;width:4px;height:4px;border-radius:50%;margin-right:5px}.mr-systemstatus small{font-size:6px;letter-spacing:1.1px;color:#7c8ca6}.mr-mode{background:#f8f9fc;display:flex;align-items:center;justify-content:space-between;padding:12px 17px;border-top:1px solid #dbe3f0;font-size:9px;color:#71809b}.mr-mode>div{display:flex;background:#e8edf7;border-radius:5px;padding:3px;gap:2px}.mr-mode button{background:none;border:0;color:#6d7e9c;font-size:10px;padding:7px 12px;border-radius:3px}.mr-mode button.active{background:#fff;color:var(--blue);box-shadow:0 1px 3px #3046670c}.mr-values{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:24px 0;border-top:1px solid #e2e3de;border-bottom:1px solid #e2e3de;font-size:11px;color:#66717c}.mr-values>span:first-child{font-size:8px;letter-spacing:1.3px;color:#89918e}.mr-values b{font-weight:400;font-size:15px;color:#c29e7a}.mr-work{padding:64px 0 55px}.mr-sectionhead{display:flex;align-items:end;justify-content:space-between;gap:30px}.mr-app h2{font-family:'Space Grotesk',sans-serif;font-size:35px;font-weight:500;letter-spacing:-1.4px;line-height:1.2;margin:15px 0 0}.mr-sectionhead>p,.mr-approachintro>p{font-size:12px;line-height:1.8;color:var(--secondary);margin:0}.mr-workgrid{display:grid;grid-template-columns:1fr 1fr;gap:25px;margin-top:31px}.mr-project{text-align:left;min-width:0;border:1px solid #dfe3e9;border-radius:10px;background:#fff;padding:0;overflow:hidden;transition:transform .2s,box-shadow .2s}.mr-project:hover{transform:translateY(-3px);box-shadow:0 12px 25px #213e6310}.mr-projectart{position:relative;background:#edf2fb;min-height:245px;padding:18px 23px 26px;border-bottom:1px solid #dfe7f3}.mr-artlabel{display:flex;justify-content:space-between;gap:14px;font-size:7px;letter-spacing:.7px;color:#7288b3}.mr-artlabel>span:last-child{font-size:6px;color:#7f8fac}.mr-invoiceflow{display:flex;align-items:center;justify-content:center;gap:22px;margin-top:27px}.mr-invoice{width:131px;padding:16px 14px;background:#fff;border:1px solid #cfdbee;border-radius:7px;transform:rotate(-4deg);box-shadow:0 8px 15px #3b60c509}.mr-doc{color:#7994ca;display:block}.mr-invoice>strong{display:block;font-size:10px;color:#4d6696;margin:10px 0}.mr-invoiceline{display:block;height:4px;border-radius:2px;background:#e2e9f5;margin-top:6px}.mr-invoiceline.short{width:65%}.mr-invoice>small{display:block;font-family:monospace;font-size:7px;color:#91a1bb;margin-top:11px}.mr-flowarrow{font-size:22px;color:#8fa6d0}.mr-resultcards{display:flex;flex-direction:column;gap:12px}.mr-resultcards>div{position:relative;border:1px solid #cbd9ee;background:#f9fbff;border-radius:6px;padding:12px 15px 12px 34px;min-width:146px}.mr-resultcards>div>span{position:absolute;left:12px;top:15px;font-size:12px;color:#729783}.mr-resultcards strong{display:block;font-size:10px;font-weight:500;color:#5b729b}.mr-resultcards small{display:block;font-size:8px;margin-top:4px;color:#7d90b0}.mr-resultcards>div:last-child{background:#fcf7f0;border-color:#e5d6c0}.mr-resultcards>div:last-child>span{color:#b59263}.mr-aiart{background:#f3eee7;border-color:#e8dfd1}.mr-aiart .mr-artlabel{color:#9d8b76}.mr-answer{max-width:320px;margin:24px auto 0;border:1px solid #ded3c3;background:#fffdf8;border-radius:7px;box-shadow:0 7px 15px #66451e05;overflow:hidden}.mr-answerquestion{padding:10px 13px;font-size:9px;color:#86745f;border-bottom:1px solid #ebe3d7;display:flex;gap:8px;align-items:center}.mr-answerquestion>span{font-family:monospace;font-size:9px;color:#a18b70}.mr-answerbody{padding:13px;display:flex;gap:11px}.mr-spark{font-size:21px;color:#b28e61}.mr-answerbody strong{font-size:11px;font-weight:500;color:#756650}.mr-answerbody p{font-size:9px;line-height:1.6;color:#9c8a72;margin:5px 0 8px}.mr-source{font-size:7px;color:#977953;background:#f4ecdf;padding:4px 6px;border-radius:3px}.mr-approval{border-top:1px solid #ebe3d7;padding:9px 13px;font-size:8px;color:#8e7a60;display:flex;align-items:center;gap:6px}.mr-approval i{width:4px;height:4px;background:#bc965f;border-radius:50%}.mr-approval>span{margin-left:auto;color:#9e9875}.mr-projectbody{padding:23px 25px}.mr-projectbody .mr-kicker{font-size:8px;letter-spacing:1px;color:#7c8899}.mr-project h3{font-family:'Space Grotesk',sans-serif;font-size:22px;letter-spacing:-.6px;font-weight:500;color:var(--ink);margin:12px 0;display:flex;justify-content:space-between;gap:12px}.mr-project h3>span{color:var(--blue);font-weight:400;font-size:21px}.mr-projectbody>p{font-size:12px;line-height:1.8;color:var(--secondary);margin:0;max-width:400px}.mr-caseaction{display:flex;gap:13px;margin-top:19px;font-size:10px;color:var(--blue)}.mr-example-note{font-size:9px;line-height:1.6;color:#79818a;margin:15px 0 0}.mr-approach{padding:24px 0 50px}.mr-approachintro{text-align:right}.mr-modebadge{display:inline-block;background:#eaf0fc;border:1px solid #d9e3f5;border-radius:4px;padding:5px 8px;font-size:7px;letter-spacing:1px;color:#6280b9;margin-top:10px}.mr-stagebuttons{display:grid;grid-template-columns:repeat(8,1fr);margin-top:29px;border-bottom:1px solid #d4ddeb}.mr-stagebuttons button{background:none;text-align:left;border:0;border-bottom:2px solid transparent;min-width:0;padding:13px 10px 17px;color:#7b8695;font-size:12px}.mr-stagebuttons small{font-size:8px;display:block;font-family:monospace;margin-bottom:8px;color:#909baa}.mr-stagebuttons button.active{color:var(--blue);border-bottom-color:var(--blue);background:linear-gradient(transparent,#edf2fc)}.mr-stagebuttons button.active small{color:var(--blue)}.mr-stagecontent{display:grid;grid-template-columns:95px 1fr 210px;gap:36px;padding:32px 8px}.mr-stagenumber{font-family:'Space Grotesk',sans-serif;font-size:60px;line-height:1;letter-spacing:-3px;color:#c3cddd}.mr-stagenumber>span{display:block;font-size:10px;letter-spacing:1px;color:#8696ac;margin:8px 0 26px}.mr-stagenumber>svg{color:#a4b5d5}.mr-stagetext h3{font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:24px;letter-spacing:-.7px;line-height:1.3;margin:12px 0}.mr-stagetext>p{font-size:13px;line-height:1.8;color:var(--secondary);margin:0}.mr-stagechecks{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:18px;font-size:9px;color:#69798c}.mr-stagechecks b{font-weight:400;color:#84a091;margin-right:6px}.mr-stageaside{border-left:1px solid #dfe4eb;padding-left:24px}.mr-stageaside .mr-kicker{font-size:7px;letter-spacing:1.2px}.mr-stageaside>p{font-family:'Space Grotesk',sans-serif;font-size:19px;line-height:1.4;color:#687d9e;margin:14px 0 20px}.mr-stageaside>div{display:flex;gap:9px}.mr-stageaside button{width:32px;height:32px;background:#fff;border:1px solid #d4deeb;border-radius:50%;font-size:13px;color:#6882aa}.mr-loopnote{display:flex;gap:9px;color:#8096b8;font-size:17px;padding:0 8px}.mr-loopnote>span{font-size:10px;color:#7d8a9b;align-self:center}.mr-about{display:grid;grid-template-columns:.8fr 1.3fr;gap:65px;align-items:center;border-top:1px solid #e1e3df;padding:49px 0}.mr-aboutart{position:relative;display:grid;place-items:center;overflow:hidden;min-height:285px;background:#e8edf7;border:1px solid #dae2ef;border-radius:10px}.mr-aboutmonogram{font-family:'Space Grotesk',sans-serif;font-size:142px;letter-spacing:-15px;color:#758ec4;z-index:1}.mr-aboutmonogram>span{color:#c5a480}.mr-aboutartbottom{position:absolute;bottom:20px;left:20px;right:20px;display:flex;justify-content:space-between;z-index:1;font-size:7px;letter-spacing:1px;color:#6c83ac}.mr-orbit{position:absolute;width:300px;height:300px;border:1px solid #d3ddec;border-radius:50%;left:-70px;top:-120px}.mr-orbit.two{width:400px;height:400px;top:-165px;left:-120px}.mr-orbit.three{width:500px;height:500px;left:-170px;top:-210px}.mr-aboutcopy h2{margin:18px 0 21px;font-size:32px}.mr-aboutcopy>p{font-size:13px;line-height:1.85;color:var(--secondary);max-width:540px}.mr-personalnote{display:flex;gap:12px;align-items:center;font-size:11px;color:#738096;margin-top:21px}.mr-personalnote>span{font-family:Georgia;font-size:39px;line-height:1;color:#c7a787}.mr-contact{background:#253d75;color:#fff;border-radius:11px;padding:36px 40px;overflow:hidden}.mr-contact .mr-kicker{color:#bccbeb;font-size:8px}.mr-contact>div:nth-child(2){display:flex;justify-content:space-between;align-items:center;gap:25px}.mr-contact h2{font-size:35px;line-height:1.17;color:#fbfaf5;margin:17px 0}.mr-contactbutton{flex-shrink:0;border:1px solid #e6e3d9;border-radius:5px;background:#f8f4e9;padding:13px 17px;font-size:11px;color:#3e527f;display:flex;gap:27px}.mr-contact>p{font-size:10px;color:#b6c6e7;margin:3px 0 0}.mr-footer{max-width:1200px;margin:auto;display:flex;align-items:center;justify-content:space-between;padding:28px 24px}.mr-footer .mr-brand{font-size:22px}.mr-footer>span,.mr-footer>a:last-child{font-size:9px;color:#737f8d}.mr-overlay{position:fixed;inset:0;z-index:99;background:#17203377;backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px}.mr-modal{position:relative;background:var(--bg);border:1px solid #dbe1e8;border-radius:12px;max-width:610px;width:100%;max-height:90vh;overflow:auto;padding:39px}.mr-close{position:absolute;top:11px;right:14px;border:0;background:none;font-size:26px;color:#78859a}.mr-modal h2{font-size:30px;margin:20px 0 25px}.mr-modal h3{font-size:13px;margin:22px 0 10px}.mr-modal p,.mr-modal li{font-size:13px;line-height:1.9;color:var(--secondary)}.mr-modal ol{padding-left:19px}.mr-previewnotice{padding:14px;border:1px solid #e1dacd;border-radius:5px;background:#f3efe6;color:#89785e;font-size:10px;line-height:1.7;margin-top:23px}@media(prefers-reduced-motion:reduce){.mr-app *{transition:none!important}}@media(max-width:1050px){.mr-hero{gap:26px}.mr-hero h1{font-size:45px}.mr-systemtitle{font-size:11px}.mr-actions{gap:16px}.mr-textlink{font-size:10px}.mr-stagecontent{grid-template-columns:75px 1fr 170px;gap:25px}.mr-invoiceflow{gap:12px}.mr-projectart{padding:17px}.mr-project h3{font-size:20px}.mr-about{gap:35px}}@media(max-width:720px){.mr-header{padding:20px;gap:15px;flex-wrap:wrap}.mr-brand{font-size:25px}.mr-header nav{order:3;width:100%;justify-content:center;gap:40px;font-size:12px;padding-top:13px}.mr-headercta{margin-left:auto;font-size:11px}.mr-app main{padding:0 20px}.mr-hero{grid-template-columns:1fr;padding:36px 0;gap:30px}.mr-hero h1{font-size:43px;letter-spacing:-1.9px}.mr-herocopy>.mr-kicker{font-size:7px;letter-spacing:1px}.mr-herocopy>p{font-size:15px}.mr-actions{flex-wrap:wrap;gap:18px}.mr-primary{font-size:12px}.mr-textlink{font-size:12px}.mr-system{width:100%;max-width:480px;margin:auto}.mr-values{flex-wrap:wrap;justify-content:center;gap:15px 20px;font-size:10px}.mr-values>span:first-child{width:100%;text-align:center}.mr-values b{display:none}.mr-work{padding:36px 0}.mr-sectionhead{display:block}.mr-app h2{font-size:29px}.mr-sectionhead>p,.mr-approachintro>p{font-size:12px;margin-top:17px}.mr-workgrid{grid-template-columns:1fr;gap:22px}.mr-projectbody{padding:22px}.mr-project h3{font-size:23px}.mr-projectbody>p{font-size:13px}.mr-projectart{min-height:235px}.mr-example-note{font-size:10px}.mr-approach{padding:13px 0 35px}.mr-approachintro{text-align:left}.mr-stagebuttons{grid-template-columns:repeat(4,1fr);gap:4px}.mr-stagebuttons button{padding:12px 9px;min-height:65px}.mr-stagecontent{grid-template-columns:50px 1fr;gap:18px;padding:25px 0}.mr-stagenumber{font-size:43px}.mr-stagenumber>svg{width:32px}.mr-stagetext h3{font-size:22px}.mr-stageaside{grid-column:2;border-left:0;border-top:1px solid #dfe4eb;padding:20px 0 0}.mr-stageaside>p{font-size:18px}.mr-stagechecks{font-size:10px;display:grid}.mr-stageaside button{width:40px;height:40px}.mr-loopnote{padding:0;font-size:19px}.mr-about{grid-template-columns:1fr;padding:30px 0;gap:28px}.mr-aboutart{min-height:225px}.mr-aboutcopy h2{font-size:29px}.mr-aboutcopy>p{font-size:14px}.mr-contact{padding:28px 23px}.mr-contact>div:nth-child(2){display:block}.mr-contact h2{font-size:30px;margin:19px 0 23px}.mr-contact>p{margin-top:20px;line-height:1.7}.mr-footer{padding:25px 20px}.mr-footer>span{display:none}.mr-modal{padding:32px 24px}.mr-systemstatus{font-size:8px}.mr-systemstatus small{font-size:6px}}
+.mr-app{--bg:#f8f7f3;--ink:#172033;--secondary:#586477;--blue:#3b60c5;--border:#dce2eb;font-family:Inter,sans-serif;color:var(--ink);background:var(--bg);min-height:100vh}.mr-app *{box-sizing:border-box}.mr-app button,.mr-app input{font:inherit}.mr-app button{cursor:pointer}.mr-app a{color:inherit;text-decoration:none}.mr-app :focus-visible{outline:3px solid #7694e1;outline-offset:5px}.mr-app section[id]{scroll-margin-top:30px}.mr-header{max-width:1272px;margin:auto;padding:27px 36px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e4e3de;gap:25px}.mr-brand{font-family:'Space Grotesk',sans-serif;font-size:27px;font-weight:700;letter-spacing:-1px;display:flex;align-items:center}.mr-logomark{font-family:monospace;font-size:24px;letter-spacing:-5px;color:var(--blue);margin-right:16px}.mr-period{color:var(--blue)}.mr-header nav{display:flex;gap:38px;font-size:13px;color:var(--secondary)}.mr-header nav a:hover{color:var(--blue)}.mr-headercta{border:1px solid #ccd4e0;padding:10px 17px;border-radius:5px;font-size:12px}.mr-headercta span{margin-left:27px;color:var(--blue)}.mr-app main{max-width:1200px;margin:auto;padding:0 24px}.mr-hero{display:grid;grid-template-columns:1.2fr 1fr;gap:45px;padding:76px 0 59px;align-items:center}.mr-kicker{font-family:Inter,sans-serif;font-size:9px;font-weight:500;letter-spacing:1.6px;color:#697588;display:flex;align-items:center;gap:9px}.mr-kicker>i{width:5px;height:5px;background:#bd8c5f;border-radius:50%}.mr-hero h1{font-family:'Space Grotesk',sans-serif;font-size:55px;line-height:1.13;letter-spacing:-2.4px;font-weight:500;margin:24px 0}.mr-app em{font-style:normal;color:var(--blue)}.mr-herocopy>p{font-size:15px;line-height:1.85;color:var(--secondary);max-width:465px}.mr-actions{display:flex;gap:23px;align-items:center;margin-top:28px}.mr-primary{display:inline-flex;align-items:center;justify-content:space-between;gap:24px;padding:14px 18px;background:var(--blue);color:#fff!important;border-radius:5px;font-size:12px}.mr-primary:hover{background:#2b4ca9}.mr-textlink{font-size:11px;display:flex;gap:13px;color:var(--secondary)!important}.mr-heronote{display:flex;align-items:center;gap:12px;margin-top:30px;font-size:10px;color:#737d87}.mr-heronote>span{font-size:19px;font-weight:400;color:#bf956f}.mr-system{background:#eff2f8;border:1px solid #dbe2ef;border-radius:12px;overflow:hidden;box-shadow:0 17px 33px #2d436b06}.mr-systemtop{display:flex;align-items:center;justify-content:space-between;padding:17px 20px 0;color:#7184a4;font-size:8px;letter-spacing:1.3px}.mr-systemtop button{border:1px solid #cfdaee;border-radius:5px;width:25px;height:25px;background:#f7f9fe;font-size:11px;color:#617dac}.mr-systemtitle{display:flex;justify-content:space-between;align-items:center;padding:12px 20px 0;color:#405a8b;font-size:13px}.mr-systemtitle small{font-family:monospace;font-size:8px;color:#8192af}.mr-diagram{position:relative;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:1fr 1fr;height:255px;padding:16px 14px 0;background-image:radial-gradient(#c4cfe4 .7px,transparent .7px);background-size:18px 18px}.mr-connections{position:absolute;inset:0;width:100%;height:100%}.mr-node{z-index:1;align-self:center;justify-self:center;display:flex;align-items:center;flex-direction:column;gap:10px}.mr-node>span{width:48px;height:48px;border:1px solid #ced9ed;background:#f8faff;border-radius:12px;color:#6884bd;display:grid;place-items:center;transition:background .3s,color .3s}.mr-node small{font-size:9px;color:#6880a7}.mr-node.active>span{background:var(--blue);color:white;border-color:var(--blue);box-shadow:0 0 0 5px #dce5f9}.mr-node.active small{color:var(--blue);font-weight:600}.mr-systemstatus{padding:13px 20px;border-top:1px solid #dbe3f0;font-size:9px;display:flex;flex-direction:column;gap:8px;min-height:64px;color:#4f6b9e}.mr-systemstatus b{font-weight:400;margin:0 5px;color:#8297bb}.mr-systemstatus i{display:inline-block;background:#80a286;width:4px;height:4px;border-radius:50%;margin-right:5px}.mr-systemstatus small{font-size:6px;letter-spacing:1.1px;color:#7c8ca6}.mr-mode{background:#f8f9fc;display:flex;align-items:center;justify-content:space-between;padding:12px 17px;border-top:1px solid #dbe3f0;font-size:9px;color:#71809b}.mr-mode>div{display:flex;background:#e8edf7;border-radius:5px;padding:3px;gap:2px}.mr-mode button{background:none;border:0;color:#6d7e9c;font-size:10px;padding:7px 12px;border-radius:3px}.mr-mode button.active{background:#fff;color:var(--blue);box-shadow:0 1px 3px #3046670c}.mr-values{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:24px 0;border-top:1px solid #e2e3de;border-bottom:1px solid #e2e3de;font-size:11px;color:#66717c}.mr-values>span:first-child{font-size:8px;letter-spacing:1.3px;color:#89918e}.mr-values b{font-weight:400;font-size:15px;color:#c29e7a}.mr-work{padding:64px 0 55px}.mr-sectionhead{display:flex;align-items:end;justify-content:space-between;gap:30px}.mr-app h2{font-family:'Space Grotesk',sans-serif;font-size:35px;font-weight:500;letter-spacing:-1.4px;line-height:1.2;margin:15px 0 0}.mr-sectionhead>p,.mr-approachintro>p{font-size:12px;line-height:1.8;color:var(--secondary);margin:0}.mr-workgrid{display:grid;grid-template-columns:1fr 1fr;gap:25px;margin-top:31px}.mr-project{text-align:left;min-width:0;border:1px solid #dfe3e9;border-radius:10px;background:#fff;padding:0;overflow:hidden;transition:transform .2s,box-shadow .2s}.mr-project:hover{transform:translateY(-3px);box-shadow:0 12px 25px #213e6310}.mr-projectart{position:relative;background:var(--art-bg,#edf2fb);min-height:245px;padding:18px 23px 26px;border-bottom:1px solid var(--art-edge,#dfe7f3)}.mr-artlabel{display:flex;justify-content:space-between;gap:14px;font-size:7px;letter-spacing:.7px;color:var(--art-label,#7288b3)}.mr-artlabel>span:last-child{font-size:6px;color:var(--art-mute,#7f8fac)}.mr-invoiceflow{display:flex;align-items:center;justify-content:center;gap:22px;margin-top:27px}.mr-invoice{width:131px;padding:16px 14px;background:var(--art-surface,#fff);border:1px solid var(--art-line,#cfdbee);border-radius:7px;transform:rotate(-4deg);box-shadow:0 8px 15px #3b60c509}.mr-doc{color:var(--art-accent,#7994ca);display:block}.mr-invoice>strong{display:block;font-size:10px;color:var(--art-ink,#4d6696);margin:10px 0}.mr-invoiceline{display:block;height:4px;border-radius:2px;background:var(--art-soft,#e2e9f5);margin-top:6px}.mr-invoiceline.short{width:65%}.mr-invoice>small{display:block;font-family:monospace;font-size:7px;color:var(--art-mute,#91a1bb);margin-top:11px}.mr-flowarrow{font-size:22px;color:var(--art-accent,#8fa6d0)}.mr-resultcards{display:flex;flex-direction:column;gap:12px}.mr-resultcards>div{position:relative;border:1px solid var(--art-line,#cbd9ee);background:var(--art-surface,#f9fbff);border-radius:6px;padding:12px 15px 12px 34px;min-width:146px}.mr-resultcards>div>span{position:absolute;left:12px;top:15px;font-size:12px;color:#729783}.mr-resultcards strong{display:block;font-size:10px;font-weight:500;color:var(--art-ink,#5b729b)}.mr-resultcards small{display:block;font-size:8px;margin-top:4px;color:var(--art-mute,#7d90b0)}.mr-resultcards>div:last-child{background:#fcf7f0;border-color:#e5d6c0}.mr-resultcards>div:last-child>span{color:#b59263}.mr-aiart{background:var(--art-bg,#f3eee7);border-color:var(--art-edge,#e8dfd1)}.mr-aiart .mr-artlabel{color:var(--art-label,#9d8b76)}.mr-answer{max-width:320px;margin:24px auto 0;border:1px solid var(--art-line,#ded3c3);background:var(--art-surface,#fffdf8);border-radius:7px;box-shadow:0 7px 15px #66451e05;overflow:hidden}.mr-answerquestion{padding:10px 13px;font-size:9px;color:var(--art-mute,#86745f);border-bottom:1px solid var(--art-edge,#ebe3d7);display:flex;gap:8px;align-items:center}.mr-answerquestion>span{font-family:monospace;font-size:9px;color:var(--art-accent,#a18b70)}.mr-answerbody{padding:13px;display:flex;gap:11px}.mr-spark{font-size:21px;color:var(--art-accent,#b28e61)}.mr-answerbody strong{font-size:11px;font-weight:500;color:var(--art-ink,#756650)}.mr-answerbody p{font-size:9px;line-height:1.6;color:var(--art-mute,#9c8a72);margin:5px 0 8px}.mr-source{font-size:7px;color:var(--art-ink,#977953);background:var(--art-soft,#f4ecdf);padding:4px 6px;border-radius:3px}.mr-approval{border-top:1px solid var(--art-edge,#ebe3d7);padding:9px 13px;font-size:8px;color:var(--art-mute,#8e7a60);display:flex;align-items:center;gap:6px}.mr-approval i{width:4px;height:4px;background:var(--art-accent,#bc965f);border-radius:50%}.mr-approval>span{margin-left:auto;color:var(--art-mute,#9e9875)}.mr-projectbody{padding:23px 25px}.mr-projectbody .mr-kicker{font-size:8px;letter-spacing:1px;color:#7c8899}.mr-project h3{font-family:'Space Grotesk',sans-serif;font-size:22px;letter-spacing:-.6px;font-weight:500;color:var(--ink);margin:12px 0;display:flex;justify-content:space-between;gap:12px}.mr-project h3>span{color:var(--blue);font-weight:400;font-size:21px}.mr-projectbody>p{font-size:12px;line-height:1.8;color:var(--secondary);margin:0;max-width:400px}.mr-caseaction{display:flex;gap:13px;margin-top:19px;font-size:10px;color:var(--blue)}.mr-example-note{font-size:9px;line-height:1.6;color:#79818a;margin:15px 0 0}.mr-approach{padding:24px 0 50px}.mr-approachintro{text-align:right}.mr-modebadge{display:inline-block;background:#eaf0fc;border:1px solid #d9e3f5;border-radius:4px;padding:5px 8px;font-size:7px;letter-spacing:1px;color:#6280b9;margin-top:10px}.mr-stagebuttons{display:grid;grid-template-columns:repeat(8,1fr);margin-top:29px;border-bottom:1px solid #d4ddeb}.mr-stagebuttons button{background:none;text-align:left;border:0;border-bottom:2px solid transparent;min-width:0;padding:13px 10px 17px;color:#7b8695;font-size:12px}.mr-stagebuttons small{font-size:8px;display:block;font-family:monospace;margin-bottom:8px;color:#909baa}.mr-stagebuttons button.active{color:var(--blue);border-bottom-color:var(--blue);background:linear-gradient(transparent,#edf2fc)}.mr-stagebuttons button.active small{color:var(--blue)}.mr-stagecontent{display:grid;grid-template-columns:95px 1fr 210px;gap:36px;padding:32px 8px}.mr-stagenumber{font-family:'Space Grotesk',sans-serif;font-size:60px;line-height:1;letter-spacing:-3px;color:#c3cddd}.mr-stagenumber>span{display:block;font-size:10px;letter-spacing:1px;color:#8696ac;margin:8px 0 26px}.mr-stagenumber>svg{color:#a4b5d5}.mr-stagetext h3{font-family:'Space Grotesk',sans-serif;font-weight:500;font-size:24px;letter-spacing:-.7px;line-height:1.3;margin:12px 0}.mr-stagetext>p{font-size:13px;line-height:1.8;color:var(--secondary);margin:0}.mr-stagechecks{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:18px;font-size:9px;color:#69798c}.mr-stagechecks b{font-weight:400;color:#84a091;margin-right:6px}.mr-stageaside{border-left:1px solid #dfe4eb;padding-left:24px}.mr-stageaside .mr-kicker{font-size:7px;letter-spacing:1.2px}.mr-stageaside>p{font-family:'Space Grotesk',sans-serif;font-size:19px;line-height:1.4;color:#687d9e;margin:14px 0 20px}.mr-stageaside>div{display:flex;gap:9px}.mr-stageaside button{width:32px;height:32px;background:#fff;border:1px solid #d4deeb;border-radius:50%;font-size:13px;color:#6882aa}.mr-loopnote{display:flex;gap:9px;color:#8096b8;font-size:17px;padding:0 8px}.mr-loopnote>span{font-size:10px;color:#7d8a9b;align-self:center}.mr-about{display:grid;grid-template-columns:.8fr 1.3fr;gap:65px;align-items:center;border-top:1px solid #e1e3df;padding:49px 0}.mr-aboutart{position:relative;display:grid;place-items:center;overflow:hidden;min-height:285px;background:#e8edf7;border:1px solid #dae2ef;border-radius:10px}.mr-aboutmonogram{font-family:'Space Grotesk',sans-serif;font-size:142px;letter-spacing:-15px;color:#758ec4;z-index:1}.mr-aboutmonogram>span{color:#c5a480}.mr-aboutartbottom{position:absolute;bottom:20px;left:20px;right:20px;display:flex;justify-content:space-between;z-index:1;font-size:7px;letter-spacing:1px;color:#6c83ac}.mr-orbit{position:absolute;width:300px;height:300px;border:1px solid #d3ddec;border-radius:50%;left:-70px;top:-120px}.mr-orbit.two{width:400px;height:400px;top:-165px;left:-120px}.mr-orbit.three{width:500px;height:500px;left:-170px;top:-210px}.mr-aboutcopy h2{margin:18px 0 21px;font-size:32px}.mr-aboutcopy>p{font-size:13px;line-height:1.85;color:var(--secondary);max-width:540px}.mr-personalnote{display:flex;gap:12px;align-items:center;font-size:11px;color:#738096;margin-top:21px}.mr-personalnote>span{font-family:Georgia;font-size:39px;line-height:1;color:#c7a787}.mr-contact{background:#253d75;color:#fff;border-radius:11px;padding:36px 40px;overflow:hidden}.mr-contact .mr-kicker{color:#bccbeb;font-size:8px}.mr-contact>div:nth-child(2){display:flex;justify-content:space-between;align-items:center;gap:25px}.mr-contact h2{font-size:35px;line-height:1.17;color:#fbfaf5;margin:17px 0}.mr-contactbutton{flex-shrink:0;border:1px solid #e6e3d9;border-radius:5px;background:#f8f4e9;padding:13px 17px;font-size:11px;color:#3e527f;display:flex;gap:27px}.mr-contact>p{font-size:10px;color:#b6c6e7;margin:3px 0 0}.mr-footer{max-width:1200px;margin:auto;display:flex;align-items:center;justify-content:space-between;padding:28px 24px}.mr-footer .mr-brand{font-size:22px}.mr-footer>span,.mr-footer>a:last-child{font-size:9px;color:#737f8d}.mr-overlay{position:fixed;inset:0;z-index:99;background:#17203377;backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px}.mr-modal{position:relative;background:var(--bg);border:1px solid #dbe1e8;border-radius:12px;max-width:610px;width:100%;max-height:90vh;overflow:auto;padding:39px}.mr-close{position:absolute;top:11px;right:14px;border:0;background:none;font-size:26px;color:#78859a}.mr-modal h2{font-size:30px;margin:20px 0 25px}.mr-modal h3{font-size:13px;margin:22px 0 10px}.mr-modal p,.mr-modal li{font-size:13px;line-height:1.9;color:var(--secondary)}.mr-modal ol{padding-left:19px}.mr-previewnotice{padding:14px;border:1px solid #e1dacd;border-radius:5px;background:#f3efe6;color:#89785e;font-size:10px;line-height:1.7;margin-top:23px}@media(prefers-reduced-motion:reduce){.mr-app *{transition:none!important}}@media(max-width:1050px){.mr-hero{gap:26px}.mr-hero h1{font-size:45px}.mr-systemtitle{font-size:11px}.mr-actions{gap:16px}.mr-textlink{font-size:10px}.mr-stagecontent{grid-template-columns:75px 1fr 170px;gap:25px}.mr-invoiceflow{gap:12px}.mr-projectart{padding:17px}.mr-project h3{font-size:20px}.mr-about{gap:35px}}@media(max-width:720px){.mr-header{padding:20px;gap:15px;flex-wrap:wrap}.mr-brand{font-size:25px}.mr-header nav{order:3;width:100%;justify-content:center;gap:40px;font-size:12px;padding-top:13px}.mr-headercta{margin-left:auto;font-size:11px}.mr-app main{padding:0 20px}.mr-hero{grid-template-columns:1fr;padding:36px 0;gap:30px}.mr-hero h1{font-size:43px;letter-spacing:-1.9px}.mr-herocopy>.mr-kicker{font-size:7px;letter-spacing:1px}.mr-herocopy>p{font-size:15px}.mr-actions{flex-wrap:wrap;gap:18px}.mr-primary{font-size:12px}.mr-textlink{font-size:12px}.mr-system{width:100%;max-width:480px;margin:auto}.mr-values{flex-wrap:wrap;justify-content:center;gap:15px 20px;font-size:10px}.mr-values>span:first-child{width:100%;text-align:center}.mr-values b{display:none}.mr-work{padding:36px 0}.mr-sectionhead{display:block}.mr-app h2{font-size:29px}.mr-sectionhead>p,.mr-approachintro>p{font-size:12px;margin-top:17px}.mr-workgrid{grid-template-columns:1fr;gap:22px}.mr-projectbody{padding:22px}.mr-project h3{font-size:23px}.mr-projectbody>p{font-size:13px}.mr-projectart{min-height:235px}.mr-example-note{font-size:10px}.mr-approach{padding:13px 0 35px}.mr-approachintro{text-align:left}.mr-stagebuttons{grid-template-columns:repeat(4,1fr);gap:4px}.mr-stagebuttons button{padding:12px 9px;min-height:65px}.mr-stagecontent{grid-template-columns:50px 1fr;gap:18px;padding:25px 0}.mr-stagenumber{font-size:43px}.mr-stagenumber>svg{width:32px}.mr-stagetext h3{font-size:22px}.mr-stageaside{grid-column:2;border-left:0;border-top:1px solid #dfe4eb;padding:20px 0 0}.mr-stageaside>p{font-size:18px}.mr-stagechecks{font-size:10px;display:grid}.mr-stageaside button{width:40px;height:40px}.mr-loopnote{padding:0;font-size:19px}.mr-about{grid-template-columns:1fr;padding:30px 0;gap:28px}.mr-aboutart{min-height:225px}.mr-aboutcopy h2{font-size:29px}.mr-aboutcopy>p{font-size:14px}.mr-contact{padding:28px 23px}.mr-contact>div:nth-child(2){display:block}.mr-contact h2{font-size:30px;margin:19px 0 23px}.mr-contact>p{margin-top:20px;line-height:1.7}.mr-footer{padding:25px 20px}.mr-footer>span{display:none}.mr-modal{padding:32px 24px}.mr-systemstatus{font-size:8px}.mr-systemstatus small{font-size:6px}}
 
 
 /* Additions for the Senior-Automation-Engineer integration (not part of the MagicPath export) */
@@ -2358,6 +3402,37 @@ body.mr-body{margin:0;background:#f8f7f3}
 .ls-story{background:#eff3fa;border:1px solid #d6e0ef;border-radius:13px;overflow:hidden;box-shadow:0 15px 35px #294a7d08;min-width:0}.ls-top{display:flex;justify-content:space-between;gap:10px;padding:19px 20px 0;font-size:7px;letter-spacing:1.05px;color:#6c82a7;align-items:center}.ls-demo{border:1px solid #ccd8ec;border-radius:3px;padding:3px 5px;font-size:6px;white-space:nowrap}.ls-heading{display:flex;justify-content:space-between;align-items:center;padding:14px 20px 0;gap:12px}.ls-heading strong{font-size:13px;font-weight:500;color:#405d8e}.ls-heading>span{font-size:8px;font-family:monospace;color:#8396b4;white-space:nowrap}.ls-canvas>svg{width:100%;height:auto;display:block}.ls-node{color:#7391c5;cursor:pointer;outline:none}.ls-node>rect{fill:#f9fbff;stroke:#c5d5ed;transition:fill .3s,stroke .3s}.ls-node>text{font-family:Inter,sans-serif;font-size:9px;fill:#6c83a7}.ls-node:hover>rect,.ls-node:focus-visible>rect{stroke:#3b60c5;stroke-width:2.5}.ls-node.ls-active{color:white}.ls-node.ls-active>rect{fill:#3b60c5;stroke:#3b60c5;filter:drop-shadow(0 4px 5px #3b60c522)}.ls-node.ls-active>text{fill:#3b60c5;font-weight:600}.ls-node.ls-complete{color:#719886}.ls-node.ls-complete>rect{fill:#f2f7f4;stroke:#c3d9cd}.ls-token{transition:transform .7s cubic-bezier(.4,0,.2,1)}.ls-flowdash{animation:ls-dash 5s linear infinite;animation-play-state:paused}.ls-running .ls-flowdash{animation-play-state:running}@keyframes ls-dash{to{stroke-dashoffset:-48}}.ls-caption{background:#f9fbff;border-top:1px solid #dce5f2;padding:16px 20px;min-height:105px}.ls-caption>div{display:flex;align-items:center;gap:7px}.ls-caption strong{font-size:11px;color:#46658f;font-weight:600}.ls-caption>div>span:last-child{margin-left:auto;font-family:monospace;letter-spacing:.6px;font-size:7px;color:#7e94b4}.ls-bluedot,.ls-amberdot{width:5px;height:5px;border-radius:50%;background:#7296ce}.ls-amberdot{background:#bf9259}.ls-caption>p{font-size:11px;line-height:1.7;color:#627c9f;margin:9px 0 0;min-height:37px}.ls-approve{display:flex;justify-content:space-between;align-items:center;gap:14px;width:100%;margin-top:10px;border:1px solid #d7bb92;border-radius:5px;background:#f8eddc;color:#926a36;font-size:10px!important;padding:9px 10px}.ls-controls{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;gap:8px;border-top:1px solid #dce5f2;background:#f7f9fd}.ls-controls>div{display:flex;gap:5px}.ls-controls button{min-width:28px;height:28px;border:1px solid #d4dff0;border-radius:4px;background:#fff;color:#6883ad;font-size:12px;padding:0 7px}.ls-controls button>span{font-size:9px;margin-left:5px}.ls-controls label{display:flex;align-items:center;gap:5px;font-size:8px;color:#7186a5;cursor:pointer}.ls-controls input{accent-color:#b38b55;width:11px;height:11px}.ls-bottom{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:11px 16px;border-top:1px solid #dce5f2;background:#f9fbff}.ls-bottom>span{font-size:7px;color:#8094b0;max-width:50%;line-height:1.5}.ls-bottom>div{display:flex;gap:2px;background:#e9eff9;border-radius:5px;padding:3px}.ls-bottom button{border:0;background:none;border-radius:3px;font-size:9px;color:#7790b5;padding:6px 9px}.ls-bottom button.active{background:white;color:#3b60c5;box-shadow:0 1px 3px #294a7d0d}.mr-hero{align-items:center;grid-template-columns:1.08fr 1fr;gap:35px}@media(max-width:720px){.mr-hero{grid-template-columns:1fr}.ls-top{padding:17px 15px 0;font-size:6px}.ls-heading{padding:13px 15px 0}.ls-heading strong{font-size:12px}.ls-caption{padding:14px 16px}.ls-caption>p{font-size:12px}.ls-controls{flex-wrap:wrap;padding:12px;gap:10px}.ls-controls label{font-size:9px}.ls-controls button{min-width:31px;height:33px}.ls-bottom{padding:10px 12px}.ls-bottom>span{font-size:7px}}@media(prefers-reduced-motion:reduce){.ls-story *{animation:none!important;transition:none!important}}
 
 .ls-controlhint{font-size:8px;color:#7186a5}.sv-search{animation:sv-search 3.5s ease-in-out infinite}.sv-grow{transform-box:fill-box;transform-origin:left;animation:sv-grow 1.6s ease-out both}.sv-draw,.sv-chart{stroke-dasharray:400;stroke-dashoffset:400;animation:sv-draw 2.7s ease forwards}.sv-check{animation:sv-check .55s ease-out both;transform-box:fill-box;transform-origin:center}.sv-flowdot{animation:sv-dot 2.8s ease-in-out infinite}.ls-story .sv-search,.ls-story .sv-grow,.ls-story .sv-draw,.ls-story .sv-chart,.ls-story .sv-check,.ls-story .sv-flowdot{animation-play-state:paused}.ls-running .sv-search,.ls-running .sv-grow,.ls-running .sv-draw,.ls-running .sv-chart,.ls-running .sv-check,.ls-running .sv-flowdot{animation-play-state:running}@keyframes sv-search{0%,100%{transform:translateX(-32px)}50%{transform:translateX(48px)}}@keyframes sv-grow{from{transform:scaleX(.25)}to{transform:scaleX(1)}}@keyframes sv-draw{to{stroke-dashoffset:0}}@keyframes sv-check{from{opacity:.25;transform:scale(.8)}to{opacity:1;transform:scale(1)}}@keyframes sv-dot{0%{transform:translateX(-12px)}50%{transform:translateX(64px)}100%{transform:translateX(-12px)}}.ls-story:not(.ls-running) .sv-draw,.ls-story:not(.ls-running) .sv-chart{stroke-dashoffset:0;animation:none}.ls-story:not(.ls-running) .sv-grow,.ls-story:not(.ls-running) .sv-check{animation:none}@media(prefers-reduced-motion:reduce){.ls-story .sv-draw,.ls-story .sv-chart{stroke-dashoffset:0;animation:none!important}.ls-story .sv-grow,.ls-story .sv-check{opacity:1;transform:none}}
+
+/* ---- Selected work: editable cards (templates, states, text hardening) ---- */
+.mr-artlabel>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mr-project h3{overflow-wrap:anywhere}
+.mr-projectbody>p{overflow-wrap:anywhere}
+.mr-projectbody .mr-kicker{overflow-wrap:anywhere}
+.mr-workgrid.single{grid-template-columns:minmax(0,640px)}
+.mr-dash{max-width:340px;margin:22px auto 0}
+.mr-dash svg{display:block;width:100%;height:auto}
+.mr-dash text{font-family:Inter,sans-serif}
+.dsh-panel{fill:var(--art-surface,#f9fbff);stroke:var(--art-line,#ccdaef)}
+.dsh-tile{fill:var(--art-soft,#eef3fc)}
+.dsh-label{fill:var(--art-mute,#8598b6)}
+.dsh-value{fill:var(--art-ink,#6687c4)}
+.dsh-grid{stroke:var(--art-edge,#e1e8f3)}
+.dsh-line{stroke:var(--art-accent,#668dce)}
+.dsh-note{fill:var(--art-mute,#8ca0bd)}
+.mr-art-image{padding:0;overflow:hidden}
+.mr-artimg{position:absolute;inset:0;overflow:hidden}
+.mr-artimg img{display:block;width:100%;height:100%;object-fit:cover}
+.mr-artimg-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--art-mute,#7f8fac)}
+.mr-art-image .mr-artlabel{position:absolute;top:14px;left:16px;right:16px;z-index:2}
+.mr-art-image .mr-artlabel>span{background:#ffffffdb;color:#4b5c78;padding:3px 7px;border-radius:4px}
+.mr-art-image .mr-artlabel>span:empty{display:none}
+.mr-skeleton{pointer-events:none}
+.mr-skeleton .mr-projectart{background:#eceff4;border-bottom-color:#e3e7ee}
+.mr-skelline{height:10px;border-radius:3px;background:#eceff4;margin:14px 0}
+.mr-skelline.w60{width:60%}
+.mr-skelline.w90{width:90%}
+.mr-modal .mr-modallink{display:inline-flex;margin-top:6px}
+.mr-project.is-selected{box-shadow:0 0 0 2px var(--blue)}
 `;
 
 const MatsHomepage = (() => {
@@ -2450,42 +3525,22 @@ const MatsHomepage = (() => {
       const paths = [<><circle cx="10" cy="10" r="6" /><path d="m15 15 6 6" /></>, <><path d="M4 20V12m8 8V5m8 15V9M2 21h20" /></>, <><rect x="2" y="2" width="7" height="6" rx="1" /><rect x="15" y="16" width="7" height="6" rx="1" /><path d="M5 8v11h10M9 5h10v11" /></>, <><path d="m7 6-5 6 5 6m10-12 5 6-5 6M14 3l-4 18" /></>, <><path d="M8 3h8M10 3v7L3 21h18l-7-11V3M7 16h10" /></>, <><path d="M12 16V2m-5 5 5-5 5 5M3 14v7h18v-7" /></>, <><path d="M2 13h5l3-8 4 15 3-7h5" /></>, <><path d="M20 8A8 8 0 0 0 6 5L3 8m0-5v5h5M4 16a8 8 0 0 0 14 3l3-3m0 5v-5h-5" /></>];
       return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[n % 8]}</svg>;
     }
-    const examples = [{
-      title: "From invoice to verified record.",
-      category: "RPA \xB7 SYSTEM INTEGRATION",
-      description: "A workflow that connects legacy systems, validates the details, and hands exceptions to a person.",
-      question: "How can invoice data move between disconnected systems without adding another manual queue?",
-      approach: "Validate required fields, match the purchase order, and update the destination system. Keep mismatches in a review queue with the relevant context.",
-      measure: "Compare handling time and error rates with the manual baseline. Report exceptions separately from successful automated runs."
-    }, {
-      title: "Useful answers. Visible evidence.",
-      category: "AGENTIC AI \xB7 KNOWLEDGE RETRIEVAL",
-      description: "An assistant that finds relevant information, shows its sources, and knows when to ask for help.",
-      question: "How can a team find reliable answers across internal documents without losing the source of the information?",
-      approach: "Retrieve relevant passages before generating an answer. Show citations and abstain when the evidence is incomplete. Require approval before any consequential action.",
-      measure: "Evaluate retrieval relevance, answer faithfulness, escalation quality, latency, and cost on a representative test set."
-    }];
     const MatsHomepage = ({
       defaultMode = 0,
       onModeChange,
-      onContact
+      onContact,
+      work
     } = {}) => {
       const [mode, setMode] = useState(defaultMode), [stage, setStage] = useState(0), [modal, setModal] = useState(null);
+      const cards = (work ? work.cards : normalizeWorkCards(defaultWorkCards())).filter((c) => c.visible);
+      const workLoading = !!(work && work.status === "loading");
+      const hasWork = workLoading || cards.length > 0;
       const close = useRef(null), trigger = useRef(null);
       const rows = mode ? ai : rpa;
       const dismiss = () => {
         setModal(null);
         trigger.current?.focus();
       };
-      useEffect(() => {
-        if (modal === null) return;
-        close.current?.focus();
-        const f = (e) => {
-          if (e.key === "Escape") dismiss();
-        };
-        document.addEventListener("keydown", f);
-        return () => document.removeEventListener("keydown", f);
-      }, [modal]);
       const jump = (e, id) => {
         const el = id === "mr-home" ? null : document.getElementById(id);
         if (id !== "mr-home" && !el) return;
@@ -2498,28 +3553,17 @@ const MatsHomepage = (() => {
         trigger.current = e.currentTarget;
         setModal(n);
       };
-      return <div className="mr-app"><header className="mr-header"><a className="mr-brand" href="#mr-home" onClick={(e) => jump(e, "mr-home")}><span className="mr-logomark">[→</span>mats<span className="mr-period">.</span></a><nav aria-label="Main navigation"><a href="#mr-work" onClick={(e) => jump(e, "mr-work")}>Work</a><a href="#mr-approach" onClick={(e) => jump(e, "mr-approach")}>Approach</a><a href="#mr-about" onClick={(e) => jump(e, "mr-about")}>About</a></nav><a href="#mr-contact" className="mr-headercta" onClick={(e) => jump(e, "mr-contact")}>Let’s talk <span>↗</span></a></header><main id="mr-home"><section className="mr-hero"><div className="mr-herocopy"><div className="mr-kicker"><i /> MATS ØSTVIG / SENIOR AUTOMATION ENGINEER</div><h1>Reliable automation.<br />More room for<br /><em>meaningful work.</em></h1><p>I build RPA workflows and bounded AI agents that reduce repetitive work—from understanding the process to improving what happens next.</p><div className="mr-actions"><a className="mr-primary" href="#mr-work" onClick={(e) => jump(e, "mr-work")}>View selected work <span>↘</span></a><a className="mr-textlink" href="#mr-contact" onClick={(e) => jump(e, "mr-contact")}>Start a conversation <span>↗</span></a></div><div className="mr-heronote"><span>+</span> A practical mindset. A complete lifecycle.</div></div><LifecycleStory mode={mode} onMode={(n) => {
+      return <div className="mr-app"><header className="mr-header"><a className="mr-brand" href="#mr-home" onClick={(e) => jump(e, "mr-home")}><span className="mr-logomark">[→</span>mats<span className="mr-period">.</span></a><nav aria-label="Main navigation">{hasWork && <a href="#mr-work" onClick={(e) => jump(e, "mr-work")}>Work</a>}<a href="#mr-approach" onClick={(e) => jump(e, "mr-approach")}>Approach</a><a href="#mr-about" onClick={(e) => jump(e, "mr-about")}>About</a></nav><a href="#mr-contact" className="mr-headercta" onClick={(e) => jump(e, "mr-contact")}>Let’s talk <span>↗</span></a></header><main id="mr-home"><section className="mr-hero"><div className="mr-herocopy"><div className="mr-kicker"><i /> MATS ØSTVIG / SENIOR AUTOMATION ENGINEER</div><h1>Reliable automation.<br />More room for<br /><em>meaningful work.</em></h1><p>I build RPA workflows and bounded AI agents that reduce repetitive work—from understanding the process to improving what happens next.</p><div className="mr-actions">{hasWork && <a className="mr-primary" href="#mr-work" onClick={(e) => jump(e, "mr-work")}>View selected work <span>↘</span></a>}<a className="mr-textlink" href="#mr-contact" onClick={(e) => jump(e, "mr-contact")}>Start a conversation <span>↗</span></a></div><div className="mr-heronote"><span>+</span> A practical mindset. A complete lifecycle.</div></div><LifecycleStory mode={mode} onMode={(n) => {
         setMode(n);
         setStage(0);
         onModeChange?.(n);
-      }} /></section><div className="mr-values"><span>PROCESS FIRST</span><span>APIs before complexity</span><b>✳</b><span>Human oversight, built in</span><b>✳</b><span>Outcomes you can measure</span></div><section className="mr-work" id="mr-work"><div className="mr-sectionhead"><div><div className="mr-kicker">01 / SELECTED WORK</div><h2>Make the work <em>work better.</em></h2></div><p>Two ways to turn a recurring problem<br />into a dependable system.</p></div><div className="mr-workgrid">{examples.map((p, i) => <button className="mr-project" onClick={(e) => show(e, i)} key={p.title}><div className={`mr-projectart ${i ? "mr-aiart" : ""}`}><div className="mr-artlabel"><span>{i ? "EVIDENCE \u2192 ANSWER" : "INPUT \u2192 VALIDATION \u2192 ACTION"}</span><span>ILLUSTRATIVE EXAMPLE</span></div>{i ? <div className="mr-answer"><div className="mr-answerquestion"><span>Q</span> What is the approval policy?</div><div className="mr-answerbody"><span className="mr-spark">✳</span><div><strong>An answer you can trace.</strong><p>Grounded in the relevant policy.<br />Reviewed before action.</p><span className="mr-source">↗ Source 01 · Approval policy</span></div></div><div className="mr-approval"><i /> Human approval required <span>✓</span></div></div> : <div className="mr-invoiceflow"><div className="mr-invoice"><span className="mr-doc"><Icon n={2} size={27} /></span><strong>Invoice received</strong><span className="mr-invoiceline" /><span className="mr-invoiceline short" /><small>INV-1042</small></div><span className="mr-flowarrow">→</span><div className="mr-resultcards"><div><span>✓</span><strong>Validated</strong><small>Rules matched</small></div><div><span>↗</span><strong>Review queue</strong><small>Exceptions to a person</small></div></div></div>}</div><div className="mr-projectbody"><span className="mr-kicker">{p.category}</span><h3>{p.title}<span>↗</span></h3><p>{p.description}</p><span className="mr-caseaction">Explore the approach <span>→</span></span></div></button>)}</div><p className="mr-example-note">Illustrative examples of how I approach the work. They are not client engagements or measured results.</p></section><section id="mr-approach" className="mr-approach"><div className="mr-sectionhead"><div><div className="mr-kicker">02 / HOW I WORK</div><h2>A clear path.<br /><em>No black boxes.</em></h2></div><div className="mr-approachintro"><p>Eight stages. The right questions at every step.<br />Explore the method behind {mode ? "a bounded AI agent" : "a reliable automation"}.</p><span className="mr-modebadge">{mode ? "\u2733 AGENTIC AI" : "\u2318 RPA"} PERSPECTIVE</span></div></div><div className="mr-stagebuttons" aria-label="Choose a lifecycle stage">{rows.map((r, i) => <button key={i} aria-pressed={stage === i} onClick={() => setStage(i)} className={stage === i ? "active" : ""}><small>0{i + 1}</small><span>{r[0]}</span></button>)}</div><div className="mr-stagecontent"><div className="mr-stagenumber">0{stage + 1}<span>/ 08</span><Icon n={stage} size={44} /></div><div className="mr-stagetext"><span className="mr-kicker">{rows[stage][0].toUpperCase()}</span><h3>{rows[stage][1]}</h3><p>{rows[stage][2]}</p><div className="mr-stagechecks">{rows[stage].slice(3).map((s) => <span key={s}><b>✓</b>{s}</span>)}</div></div><div className="mr-stageaside"><span className="mr-kicker">THE PRINCIPLE</span><p>{mode ? "Autonomy is earned through evidence." : "The simplest reliable solution wins."}</p><div><button aria-label="Previous stage" onClick={() => setStage((stage + 7) % 8)}>←</button><button aria-label="Next stage" onClick={() => setStage((stage + 1) % 8)}>→</button></div></div></div><div className="mr-loopnote">↻ <span>Improve feeds the next Identify pass. The loop is the point.</span></div></section><section className="mr-about" id="mr-about"><div className="mr-aboutart" aria-hidden="true"><span className="mr-aboutmonogram">m<span>.</span></span><div className="mr-aboutartbottom"><span>MATS ØSTVIG</span><span>CURIOUS BY DEFAULT ↗</span></div><i className="mr-orbit one" /><i className="mr-orbit two" /><i className="mr-orbit three" /></div><div className="mr-aboutcopy"><div className="mr-kicker">03 / THE PERSON BEHIND THE PROCESS</div><h2>Engineering habits.<br /><em>A human perspective.</em></h2><p>I’m Mats. My approach starts with the people doing the work—the handoffs, the workarounds, and the details that a diagram can miss.</p><p>I care about solutions that are understandable, maintainable, and useful after the handoff. Sometimes that’s a bot. Sometimes it’s an API. Sometimes the process needs to change first.</p><div className="mr-personalnote"><span>“</span>Good automation makes room for better work.</div></div></section><section className="mr-contact" id="mr-contact"><div className="mr-kicker">START WITH THE PROBLEM</div><div><h2>What would you take<br />off your team’s plate?</h2><button className="mr-contactbutton" onClick={(e) => show(e, 2)}>Start a conversation <span>↗</span></button></div><p>A few sentences about the workflow are a good place to begin.</p></section></main><footer className="mr-footer"><a href="#mr-home" className="mr-brand" onClick={(e) => jump(e, "mr-home")}><span className="mr-logomark">[→</span>mats.</a><span>Thoughtful systems. Meaningful work.</span><a href="#mr-home" onClick={(e) => jump(e, "mr-home")}>Back to top ↑</a></footer>{modal !== null && <div className="mr-overlay" onClick={(e) => {
-        if (e.target === e.currentTarget) dismiss();
-      }}><section className="mr-modal" role="dialog" aria-modal="true" aria-labelledby="mr-dialogtitle" onKeyDown={(e) => {
-        if (e.key === "Tab") {
-          const els = e.currentTarget.querySelectorAll("button,a[href],input,textarea");
-          const first = els[0], last = els[els.length - 1];
-          if (e.shiftKey && document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          } else if (!e.shiftKey && document.activeElement === last) {
-            e.preventDefault();
-            first.focus();
-          }
-        }
-      }}><button className="mr-close" ref={close} onClick={dismiss} aria-label="Close dialog">×</button><div className="mr-kicker">{modal === 2 ? "LET\u2019S FIND THE RIGHT STARTING POINT" : "ILLUSTRATIVE CASE STUDY"}</div><h2 id="mr-dialogtitle">{modal === 2 ? "Tell me about the work." : examples[modal].title}</h2>{modal === 2 ? <><p>A useful first conversation starts with three questions:</p><ol><li>What task is taking too much time?</li><li>Which people and systems are involved?</li><li>What would a better outcome look like?</li></ol>{onContact ? <button className="mr-primary mr-modalcta" onClick={() => {
+      }} /></section><div className="mr-values"><span>PROCESS FIRST</span><span>APIs before complexity</span><b>✳</b><span>Human oversight, built in</span><b>✳</b><span>Outcomes you can measure</span></div>{hasWork && <WorkSection cards={cards} loading={workLoading} onOpen={(e, card) => show(e, { type: "case", id: card.id })} />}<section id="mr-approach" className="mr-approach"><div className="mr-sectionhead"><div><div className="mr-kicker">02 / HOW I WORK</div><h2>A clear path.<br /><em>No black boxes.</em></h2></div><div className="mr-approachintro"><p>Eight stages. The right questions at every step.<br />Explore the method behind {mode ? "a bounded AI agent" : "a reliable automation"}.</p><span className="mr-modebadge">{mode ? "\u2733 AGENTIC AI" : "\u2318 RPA"} PERSPECTIVE</span></div></div><div className="mr-stagebuttons" aria-label="Choose a lifecycle stage">{rows.map((r, i) => <button key={i} aria-pressed={stage === i} onClick={() => setStage(i)} className={stage === i ? "active" : ""}><small>0{i + 1}</small><span>{r[0]}</span></button>)}</div><div className="mr-stagecontent"><div className="mr-stagenumber">0{stage + 1}<span>/ 08</span><Icon n={stage} size={44} /></div><div className="mr-stagetext"><span className="mr-kicker">{rows[stage][0].toUpperCase()}</span><h3>{rows[stage][1]}</h3><p>{rows[stage][2]}</p><div className="mr-stagechecks">{rows[stage].slice(3).map((s) => <span key={s}><b>✓</b>{s}</span>)}</div></div><div className="mr-stageaside"><span className="mr-kicker">THE PRINCIPLE</span><p>{mode ? "Autonomy is earned through evidence." : "The simplest reliable solution wins."}</p><div><button aria-label="Previous stage" onClick={() => setStage((stage + 7) % 8)}>←</button><button aria-label="Next stage" onClick={() => setStage((stage + 1) % 8)}>→</button></div></div></div><div className="mr-loopnote">↻ <span>Improve feeds the next Identify pass. The loop is the point.</span></div></section><section className="mr-about" id="mr-about"><div className="mr-aboutart" aria-hidden="true"><span className="mr-aboutmonogram">m<span>.</span></span><div className="mr-aboutartbottom"><span>MATS ØSTVIG</span><span>CURIOUS BY DEFAULT ↗</span></div><i className="mr-orbit one" /><i className="mr-orbit two" /><i className="mr-orbit three" /></div><div className="mr-aboutcopy"><div className="mr-kicker">03 / THE PERSON BEHIND THE PROCESS</div><h2>Engineering habits.<br /><em>A human perspective.</em></h2><p>I’m Mats. My approach starts with the people doing the work—the handoffs, the workarounds, and the details that a diagram can miss.</p><p>I care about solutions that are understandable, maintainable, and useful after the handoff. Sometimes that’s a bot. Sometimes it’s an API. Sometimes the process needs to change first.</p><div className="mr-personalnote"><span>“</span>Good automation makes room for better work.</div></div></section><section className="mr-contact" id="mr-contact"><div className="mr-kicker">START WITH THE PROBLEM</div><div><h2>What would you take<br />off your team’s plate?</h2><button className="mr-contactbutton" onClick={(e) => show(e, { type: "contact" })}>Start a conversation <span>↗</span></button></div><p>A few sentences about the workflow are a good place to begin.</p></section></main><footer className="mr-footer"><a href="#mr-home" className="mr-brand" onClick={(e) => jump(e, "mr-home")}><span className="mr-logomark">[→</span>mats.</a><span>Thoughtful systems. Meaningful work.</span><a href="#mr-home" onClick={(e) => jump(e, "mr-home")}>Back to top ↑</a></footer>{modal && modal.type === "contact" && <ModalShell kicker={"LET\u2019S FIND THE RIGHT STARTING POINT"} title="Tell me about the work." onDismiss={dismiss} closeRef={close}><p>A useful first conversation starts with three questions:</p><ol><li>What task is taking too much time?</li><li>Which people and systems are involved?</li><li>What would a better outcome look like?</li></ol>{onContact ? <button className="mr-primary mr-modalcta" onClick={() => {
         dismiss();
         onContact();
-      }}>Open the contact form <span>→</span></button> : <div className="mr-previewnotice">Contact form not connected.</div>}</> : <>{[["The problem", examples[modal].question], ["The approach", examples[modal].approach], ["What to measure", examples[modal].measure]].map(([h, p]) => <div key={h}><h3>{h}</h3><p>{p}</p></div>)}<div className="mr-previewnotice">This example demonstrates the case-study layout. It does not claim a completed client engagement or measured result.</div></>}</section></div>}</div>;
+      }}>Open the contact form <span>→</span></button> : <div className="mr-previewnotice">Contact form not connected.</div>}</ModalShell>}{modal && modal.type === "case" && (() => {
+        const card = cards.find((c) => c.id === modal.id);
+        return card ? <ModalShell kicker={card.content.illustrative ? "ILLUSTRATIVE CASE STUDY" : "CASE STUDY"} title={card.content.title} onDismiss={dismiss} closeRef={close}><CaseStudyBody card={card} /></ModalShell> : null;
+      })()}</div>;
     };
     return MatsHomepage;
   })();
@@ -2534,6 +3578,7 @@ const MatsHomepage = (() => {
 function HomeRoute() {
   const [mode, setMode] = useMode();
   const navigate = useNavigate();
+  const work = usePublishedWork();
   useEffect(() => {
     document.body.classList.add("mr-body");
     return () => document.body.classList.remove("mr-body");
@@ -2545,6 +3590,7 @@ function HomeRoute() {
         defaultMode={mode === "ai" ? 1 : 0}
         onModeChange={(n) => setMode(n ? "ai" : "rpa")}
         onContact={() => { navigate("/contact"); window.scrollTo(0, 0); }}
+        work={work}
       />
     </>
   );
