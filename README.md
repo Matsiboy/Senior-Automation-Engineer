@@ -1,183 +1,95 @@
 # Mats Østvig — Senior Automation Engineer
 
-A one-page eight-stage site (Identify → Improve) that tells its story two ways —
-**RPA** or **Agentic AI**, switched with the toggle in the nav — with About/Contact
-subpages and an `/admin` panel that edits every section of every page, with all
-content optionally synced live through Firebase.
+A one-page site (React + Vite, deployed to GitHub Pages) built from the MagicPath "Mats Homepage"
+design: hero, selected work, "How I work" (an eight-stage method told two ways — RPA or Agentic AI),
+"The person behind the process", and a contact call-to-action. There is also a built-in editor at `/admin`.
 
-## File structure
+The whole site lives in **one file, `src/App.jsx`**. To change the site's code, upload just that file.
+(`src/main.jsx`, `index.html`, `vite.config.js`, `package.json` are one-time scaffolding.)
 
-```
-your-repo/
-├── .github/
-│   └── workflows/
-│       └── deploy.yml        # builds + deploys to GitHub Pages on every push to main
-├── public/                   # static assets — put real stage images/drawings here
-├── src/
-│   ├── main.jsx               # entry point — just mounts <App/> in a HashRouter.
-│   │                          #   One-time scaffolding; you shouldn't need to touch this again.
-│   └── App.jsx                 # THE WHOLE SITE: config, all 4 routes (Home/About/Contact/Admin),
-│                               #   every section, both stories (RPA + Agentic AI). This is the only file you
-│                               #   need to edit or re-upload for content/section changes.
-├── index.html                 # Vite root HTML — one-time scaffolding
-├── package.json               # one-time scaffolding
-├── vite.config.js             # one-time scaffolding — sets the base path for GitHub Pages
-├── .gitignore
-└── README.md
-```
+## Editing the content (`/admin`)
 
-Everything — the journey, About, Contact, and the `/admin` editor — lives in
-`App.jsx` now, the same way your previous project kept everything in one file.
-`main.jsx` just mounts it; you should only ever need to open that once, during
-initial setup.
+Open `https://<your-site>/#/admin`, enter the passphrase, and pick a section:
 
-## 1. Local setup
+| Section | What you can edit |
+|---|---|
+| **Hero** | the line above the headline, the label above the RPA / Agentic AI switch, the two-line headline, paragraph and note (each has an **RPA** and an **Agentic AI** version; pick which to edit), the button texts, and the "How it starts" moment |
+| **Selected work** | the *Examples* heading and intro, and the example cards (see below) |
+| **How I work** | the heading, intro and loop note; for **both** versions: the principle, the four **scroll-story** parts (heading, text, side note, label, caption) and the eight stages of the full method (headline, text, three checkpoints) |
+| **About me** | the section heading, paragraphs, quote and captions, plus the **About window**: card cue, heading, **portrait** (upload or web address, with crop and description), name, role, introduction, skill tags, text blocks and quote |
+| **Contact & footer** | **where the contact button leads** (an email address or an https:// link), the call-to-action band, the contact dialog's text and questions, the footer line |
 
-```
-npm install
-npm run dev
-```
-Opens the site at `http://localhost:5173`. Routes: `/` (home), `/about`, `/contact`, `/admin`.
+The homepage has one RPA / Agentic AI mode: the two switches (above the hero and in How I work), the logo, the hero text,
+the eight-stage animation and the method all follow it, and the choice is remembered in the visitor's browser.
 
-## 2. Put it on GitHub Pages
+A live preview shows the real homepage with your draft (desktop or mobile width), scrolled to the section
+you are editing. Each section has **Reset to original**.
 
-1. Create a repo on GitHub and push these files to it.
-2. Open `vite.config.js` and set `base`:
-   - Project site (`https://USERNAME.github.io/REPO-NAME/`) → `base: "/REPO-NAME/"`
-   - User/org site (repo literally named `USERNAME.github.io`) → `base: "/"`
-3. In the repo: **Settings → Pages → Build and deployment → Source: "GitHub Actions"**.
-4. Push to `main` — the included workflow (`.github/workflows/deploy.yml`) builds the
-   site with `npm run build` and deploys the `dist/` folder automatically. Check the
-   **Actions** tab for progress; the Pages URL appears there once it succeeds.
+**Example cards:** each card has a **Content** tab (title, category, description, case-study sections,
+link, show/hide, order) and an **Appearance** tab (one of four templates — workflow diagram, AI answer panel,
+dashboard, uploaded image — two colours, the illustration's wording, and an image crop). Fonts, spacing and
+responsive behaviour are fixed by the design, so no setting can break the layout.
 
-**Why the URLs look like `/#/about`:** the router is `HashRouter`, which needs no
-server configuration — GitHub Pages only serves static files and can't be told to
-redirect deep links (`/about`) back to `index.html` the way clean URLs need. This is
-also why nav clicks are handled with a manual scroll/`Link` (already wired up) instead
-of relying on the browser's default anchor behavior.
+**Not editable on purpose:** layout, typography, the colour palette, the lifecycle animation and the scroll story's illustrations,
+and the "illustrative example" disclosures. Example projects are labelled *illustrative* by default — turn that off
+per card only for real, verified work. Nothing on the site is invented: until you add a contact link, the
+contact dialog says contact details haven't been added.
 
-<details>
-<summary>Clean URLs instead of HashRouter (optional, more setup)</summary>
+### How changes are kept
 
-Switch `main.jsx` from `HashRouter` to `BrowserRouter`, then add a `public/404.html`
-that's a copy of `index.html` — GitHub Pages serves `404.html` for any unknown path,
-which lets the app boot and the router take over from there. You'll also want the
-[spa-github-pages](https://github.com/rafgraph/spa-github-pages) redirect snippet in
-that `404.html` so the original URL is preserved.
-</details>
+| | Where | Who sees it |
+|---|---|---|
+| **Draft** | this browser's localStorage, saved automatically | only you, in this browser |
+| **Published** | Firestore document `siteContent/work` (text + cards) and one `siteContent/workimg-<id>` document per uploaded picture | every visitor; pages that are open update live |
 
-## 3. Firebase (makes News/Projects/all content editable live, from any device)
+Press **Publish** to make the draft live; **Discard changes** goes back to what is published. Visitors never see
+your draft. A copy of the last published content is cached in visitors' browsers so repeat visits are instant.
+Until something is published, visitors see the built-in content.
 
-Without Firebase, the `/admin` panel still works — it saves to that browser's
-`localStorage`, which is fine for solo editing on one machine but won't show up
-for other visitors or sync across devices. Connecting Firebase makes every save
-in `/admin` go live for everyone immediately.
+Uploaded pictures are shrunk to JPEG (≤ ~450 KB) and stored in Firestore, because Firebase Storage needs a paid
+plan. For many or large pictures, put files in `public/` and enter their path (e.g. `images/project.jpg`).
 
-### Set up the project
-1. Go to the [Firebase console](https://console.firebase.google.com) → **Add project**.
-2. Inside the project: **Build → Firestore Database → Create database** (start in
-   production mode).
-3. **Project settings → General → Your apps → Add app → Web (`</>`)**. Copy the
-   `firebaseConfig` object it gives you.
-4. In `src/App.jsx`, paste that object into the exported `firebaseConfig` constant,
-   and set:
-   ```js
-   export const FIREBASE_ENABLED = true;
-   ```
+## Design
 
-### How content is stored
-Everything editable in `/admin` lives in **one Firestore document per story**:
-`siteContent/en` (the RPA story — it keeps its original id so anything you saved
-earlier still loads) and `siteContent/ai` (the Agentic AI story). The old
-`siteContent/no` (Norwegian) document is no longer used and can be deleted. You
-don't need to create these manually —
-the first time you click **Save changes** in `/admin` with Firebase connected, it
-creates the document for you (`setDoc` creates-or-overwrites). The public site
-subscribes to these documents live (`onSnapshot`), so an edit shows up for open
-tabs without a page refresh.
+Page background `#FDF7EB`, brand blue `#3B60C5`, main text `#253550`; headings in Source Serif 4, body in Source Sans 3. The
+exact colour table and checks are in the release's `COLOR-SPEC.md`. The admin uses the same palette and fonts.
 
-There are no separate `news` / `projects` collections — those are just arrays
-inside the same per-story document, edited from the News/Projects tabs in
-`/admin`, same as every other section.
+## Securing publishing (important)
 
-### Security rules
-By default a fresh Firestore/Storage project either blocks everything, or (in
-"test mode") allows anyone to read *and* write for 30 days before locking down
-automatically. This project's `/admin` panel gates itself with a **passphrase**
-only (`ADMIN_PASSPHRASE` in `App.jsx`'s AdminSection) — that's a convenience
-speed bump, not real authentication. Firebase has no idea you "logged in"; it
-never gets told, so `request.auth` is always `null` from Firebase's point of
-view, and rules like `allow write: if request.auth != null` will reject every
-save (and produce the confusing "CORS" error on Storage uploads specifically —
-Firebase's default 403-on-denied-write response is missing CORS headers, which
-browsers report as a blocked cross-origin request instead of a clean
-permission error).
+Publishing writes to Firestore from the browser, so **your Firestore rules decide who can publish** — the admin
+passphrase only hides the page. With open rules, anyone who finds your Firebase settings could overwrite the
+site. Lock it to yourself:
 
-**This project runs with open write rules** — anyone with your Firebase config
-(which is visible in the deployed JS bundle, unavoidably, for any client app)
-could technically write to `siteContent` or upload files to `site-media`. That
-tradeoff is reasonable for a low-stakes personal site where you're the only one
-who knows the `/admin` URL and passphrase, but isn't appropriate if this ever
-holds anything sensitive. If you want it properly locked down instead, add real
-Firebase Auth (Firebase console → **Build → Authentication** → enable
-Email/Password, add yourself as a user, and swap the passphrase check in
-AdminSection for `signInWithEmailAndPassword`), then switch both rules below
-back to `if request.auth != null`.
+1. Firebase console → Authentication → turn on **Email/Password**, then **Users → Add user** (your email).
+2. Firestore Database → **Rules**:
 
-**Firestore** — console → **Firestore Database → Rules**:
 ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /siteContent/{docId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if request.auth != null
+                   && request.auth.token.email == 'YOUR-EMAIL@example.com';
     }
   }
 }
 ```
 
-Firebase Storage isn't used any more (the per-stage image uploads were removed),
-so there's no Storage setup or Blaze plan needed.
+3. In the admin, use **Sign in to publish**. Also change `ADMIN_PASSPHRASE` in `App.jsx` (it is `changeme`).
 
-If you'd rather skip Firebase entirely and only ever run `/admin` locally on
-your own machine, leave `FIREBASE_ENABLED` off — edits save to that browser's
-`localStorage` only, with no rules to manage at all.
+The admin shows these steps too (under "How to lock publishing to your account").
 
-### Quick test
-1. `FIREBASE_ENABLED = true`, real `firebaseConfig`, rules pasted in.
-2. Run locally (`npm run dev`), open `/admin`, change something (e.g. add a News item), **Save changes**.
-3. Status bar should say "Saved to Firebase — live for every visitor."
-4. Refresh `/` — the change should be there. Open Firestore console → you should see `siteContent/en` (RPA) or `siteContent/ai`.
+## Setup
 
-## Add a section to any lifecycle stage, About, or Contact
-Either edit `RPA_CONTENT` / `AI_CONTENT` directly in `App.jsx`, or (easier) use
-`/admin` → pick the story in the top-right dropdown → the relevant tab →
-**+ Add entry**. Both write to the same place. Note that the two stories start
-out sharing the same About / Contact / footer text but are stored separately, so
-edit those in each story (or tell me and I'll make them truly shared).
+- **Firebase:** create a project with Firestore, add a Web app, and paste its config into `firebaseConfig` near the
+  top of `src/App.jsx`. Set `FIREBASE_ENABLED = false` to run without Firebase (the site then always shows the
+  built-in content and the admin cannot publish).
+- **GitHub Pages:** `.github/workflows/deploy.yml` builds and deploys on every push to `main`
+  (Settings → Pages → Source: GitHub Actions). `vite.config.js` has `base: "/<repo-name>/"`; the site uses a
+  HashRouter, so no server configuration is needed.
+- **Local:** `npm install`, then `npm run dev` (or `npm run build`).
 
-The text inside the stage animations (`identifyDemo`, `assessDemo`, …) lives in
-`App.jsx` only and isn't editable from `/admin`.
+## Routes
 
-## Logo
-The "mats." logo (bracket, arrow and wordmark) is drawn as vector inside `App.jsx`
-(`Logo` component), in your theme colors, so it stays sharp at any size and needs
-no image file. `public/logo.svg` is the same logo as a standalone file (handy for
-LinkedIn, email signatures, etc.) and `index.html` uses the bracket-and-arrow
-symbol as the browser-tab icon.
-
-To use a different image instead, put it in `public/` and set
-`export const LOGO = { src: "your-logo.svg" };` in `App.jsx`.
-
-## Colors
-`THEME` in `App.jsx` — `primary: "#2563EB"`, `paper: "#FFFFFF"`. Everything else
-derives from these.
-
-## RPA / Agentic AI toggle
-The segmented toggle in the nav switches the whole page between the two stories,
-backed by `CONTENT.rpa` and `CONTENT.ai` (built from `RPA_CONTENT` and
-`AI_CONTENT` in `App.jsx`). The choice is remembered per browser. The eight
-stages keep the same ids in both, so the nav, scroll tracking and animations work
-unchanged — only the text (and a few icons) differ. To add a third story, copy
-`AI_CONTENT`'s shape and add an entry to the `MODES` array.
+`/` (the homepage) and `/admin`. Any other address (including the old `/about` and `/contact`) goes to the homepage.
