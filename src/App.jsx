@@ -1111,7 +1111,7 @@ to{opacity:1;transform:translateY(0)}
 
 .ls-quietplay{font:inherit;font-size:8px;letter-spacing:.2px;color:#5a729c;cursor:pointer;min-height:28px;padding:5px 9px;background:#ffffff70;border:1px solid #cbd8ed;border-radius:6px}.ls-quietplay:hover{background:#fff;color:#315bbb}.ls-quietplay:focus-visible{outline:2px solid #3b60c5;outline-offset:3px}.ls-caption{padding-bottom:20px}
 
-.ss-story{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:85px;align-items:start;margin:45px 0 65px}.ss-sticky{position:sticky;top:70px;margin:35px 0 0;padding:0 8px;align-self:start}.ss-console{background:#fffdf8;border:1.5px solid #3b60c5;border-radius:18px;box-shadow:7px 7px 0 #dbe3f5;overflow:hidden;transform:rotate(-1.2deg)}.ss-console-top{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #d8dfed;padding:19px 22px;font:9px monospace;letter-spacing:1px;color:#536d9e;background:#edf1fa}.ss-paperclip{position:absolute;right:32px;top:-15px;width:15px;height:42px;border:2px solid #3b60c5;border-radius:9px;z-index:1;transform:rotate(14deg);background:transparent;pointer-events:none}.ss-visual-heading{display:flex;gap:12px;align-items:center;padding:25px 25px 0}.ss-visual-heading h3{font-family:'Source Serif 4',Georgia,serif;font-size:23px;line-height:1.2;letter-spacing:-.7px;font-weight:500;margin:0;color:#263f6b}.ss-asterisk{color:#3b60c5;font-size:30px}.ss-illustration{padding:0 12px;animation:ss-reveal .4s ease both}.ss-illustration>svg{display:block;width:100%;height:auto}.ss-visual-note{font-size:12px!important;line-height:1.7!important;color:#667996!important;text-align:center;margin:0!important;padding:0 25px 25px;min-height:65px}.ss-chapter-nav{display:flex;padding:16px 22px;border-top:1px solid #dce2ed;gap:14px}.ss-chapter-nav button{flex:1;border:0;background:transparent;padding:3px 0 8px;color:#8b9bb8;font:10px monospace;text-align:left;cursor:pointer}.ss-chapter-nav i{display:block;height:3px;margin-top:8px;background:#dbe3f3;border-radius:3px;transition:background .25s}.ss-chapter-nav button[aria-current=step]{color:#3b60c5}.ss-chapter-nav button[aria-current=step] i{background:#3b60c5}.ss-margin-note{font-family:'Source Serif 4',Georgia,serif;font-size:13px;color:#61759c;margin:24px 0 0 20px;transform:rotate(-3deg)}.ss-chapters{border-left:1px dashed #b9c9e6;padding-left:34px}.ss-chapter{min-height:65vh;display:flex;flex-direction:column;justify-content:center;padding:55px 0;position:relative;scroll-margin-top:50px}.ss-chapter-marker{display:flex;align-items:center;gap:13px}.ss-chapter-marker>span{font:11px monospace;color:#3b60c5;position:relative}.ss-chapter-marker>span:before{content:'';position:absolute;left:-40px;top:2px;width:10px;height:10px;border:1px solid #a7bce3;border-radius:50%;background:#fdf2de;transition:background .3s}.ss-chapter.is-active .ss-chapter-marker>span:before{background:#3b60c5;border-color:#3b60c5;box-shadow:0 0 0 5px #3b60c511}.ss-chapter-marker small{font-size:8px;letter-spacing:1.1px;color:#76849a}.ss-chapter h3{font-family:'Source Serif 4',Georgia,serif;font-weight:500;font-size:43px;line-height:1.14;letter-spacing:-1.7px;color:#273955;margin:22px 0}.ss-chapter.is-active h3{color:#3b60c5}.ss-chapter>p{font-size:15px;line-height:1.9;color:#586477;margin:0}.ss-aside{display:flex;gap:10px;align-items:flex-start;margin-top:24px;font-size:12px;line-height:1.7;color:#59719a}.ss-aside>span{font-size:21px;line-height:1}.ss-next-link{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-top:30px;border-bottom:1px solid #b8c8e4;padding-bottom:12px;color:#3b60c5!important;font-size:13px;font-weight:500}.ss-next-link>span{font-size:22px}@keyframes ss-reveal{from{opacity:.6;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.ss-story{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:85px;align-items:start;margin:45px 0 65px}.ss-sticky{position:sticky;top:70px;margin:35px 0 0;padding:0 8px;align-self:start}.ss-console{background:#fffdf8;border:1.5px solid #3b60c5;border-radius:18px;box-shadow:7px 7px 0 #dbe3f5;overflow:hidden;transform:rotate(-1.2deg)}.ss-console-top{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #d8dfed;padding:19px 22px;font:9px monospace;letter-spacing:1px;color:#536d9e;background:#edf1fa}.ss-paperclip{position:absolute;right:32px;top:-15px;width:15px;height:42px;border:2px solid #3b60c5;border-radius:9px;z-index:1;transform:rotate(14deg);background:transparent;pointer-events:none}.ss-visual-heading{display:flex;gap:12px;align-items:center;padding:25px 25px 0}.ss-visual-heading h3{font-family:'Source Serif 4',Georgia,serif;font-size:23px;line-height:1.2;letter-spacing:-.7px;font-weight:500;margin:0;color:#263f6b}.ss-asterisk{color:#3b60c5;font-size:30px}.ss-illustration{padding:0 12px;animation:ss-reveal .28s ease both}.ss-illustration>svg{display:block;width:100%;height:auto}.ss-visual-note{font-size:12px!important;line-height:1.7!important;color:#667996!important;text-align:center;margin:0!important;padding:0 25px 25px;min-height:65px}.ss-chapter-nav{display:flex;padding:16px 22px;border-top:1px solid #dce2ed;gap:14px}.ss-chapter-nav button{flex:1;border:0;background:transparent;padding:3px 0 8px;color:#8b9bb8;font:10px monospace;text-align:left;cursor:pointer}.ss-chapter-nav i{display:block;height:3px;margin-top:8px;background:#dbe3f3;border-radius:3px;transition:background .25s}.ss-chapter-nav button[aria-current=step]{color:#3b60c5}.ss-chapter-nav button[aria-current=step] i{background:#3b60c5}.ss-margin-note{font-family:'Source Serif 4',Georgia,serif;font-size:13px;color:#61759c;margin:24px 0 0 20px;transform:rotate(-3deg)}.ss-chapters{border-left:1px dashed #b9c9e6;padding-left:34px}.ss-chapter{min-height:65vh;display:flex;flex-direction:column;justify-content:center;padding:55px 0;position:relative;scroll-margin-top:50px}.ss-chapter-marker{display:flex;align-items:center;gap:13px}.ss-chapter-marker>span{font:11px monospace;color:#3b60c5;position:relative}.ss-chapter-marker>span:before{content:'';position:absolute;left:-40px;top:2px;width:10px;height:10px;border:1px solid #a7bce3;border-radius:50%;background:#fdf2de;transition:background .3s}.ss-chapter.is-active .ss-chapter-marker>span:before{background:#3b60c5;border-color:#3b60c5;box-shadow:0 0 0 5px #3b60c511}.ss-chapter-marker small{font-size:8px;letter-spacing:1.1px;color:#76849a}.ss-chapter h3{font-family:'Source Serif 4',Georgia,serif;font-weight:500;font-size:43px;line-height:1.14;letter-spacing:-1.7px;color:#273955;margin:22px 0}.ss-chapter.is-active h3{color:#3b60c5}.ss-chapter>p{font-size:15px;line-height:1.9;color:#586477;margin:0}.ss-aside{display:flex;gap:10px;align-items:flex-start;margin-top:24px;font-size:12px;line-height:1.7;color:#59719a}.ss-aside>span{font-size:21px;line-height:1}.ss-next-link{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-top:30px;border-bottom:1px solid #b8c8e4;padding-bottom:12px;color:#3b60c5!important;font-size:13px;font-weight:500}.ss-next-link>span{font-size:22px}@keyframes ss-reveal{from{opacity:.6;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:900px){.ss-story{gap:40px}.ss-chapter h3{font-size:35px}.ss-sticky{top:35px}.ss-visual-heading h3{font-size:19px}.ss-console-top{font-size:8px;padding:17px}.ss-visual-heading{padding:22px 18px 0}}
 @media(max-width:640px){.ss-story{grid-template-columns:1fr;gap:5px;margin:25px 0 40px}.ss-sticky{top:8px;margin:0;z-index:3;padding:0 4px}.ss-console{transform:none;box-shadow:4px 4px 0 #dbe3f5;border-radius:13px;display:grid;grid-template-columns:1fr 1fr}.ss-console-top{grid-column:1/-1;padding:10px 15px;font-size:7px}.ss-visual-heading{padding:13px 0 13px 15px;align-self:center;gap:6px}.ss-visual-heading h3{font-size:17px}.ss-asterisk{font-size:23px}.ss-illustration{padding:0;align-self:center}.ss-illustration>svg{max-height:110px}.ss-visual-note{display:none}.ss-chapter-nav{grid-column:1/-1;padding:7px 15px;gap:12px}.ss-chapter-nav button{font-size:8px;padding:3px 0}.ss-chapter-nav i{margin-top:5px;height:2px}.ss-margin-note{display:none}.ss-paperclip{height:26px;top:-7px;right:20px;width:10px}.ss-chapters{margin:20px 10px 0;padding-left:27px}.ss-chapter{min-height:65vh;padding:45px 0;scroll-margin-top:220px}.ss-chapter-marker>span:before{left:-33px}.ss-chapter h3{font-size:35px}.ss-chapter>p{font-size:14px}.ss-chapter-marker small{font-size:7px}}
 @media(prefers-reduced-motion:reduce){.ss-story *{animation:none!important;transition:none!important}.ss-illustration .sv-draw,.ss-illustration .sv-chart{stroke-dashoffset:0}.ss-illustration .sv-check,.ss-illustration .sv-grow{opacity:1;transform:none}}
@@ -1257,48 +1257,65 @@ const MatsHomepage = (() => {
       const root = useRef(null);
       const chapters = useRef([]);
       const rows = story;
+      // TIGHT HANDOVER: the illustration changes only when the dot of the next chapter is level ("flush") with the
+      // illustration. Each chapter has a dot on the dashed rail; the "flush line" is the vertical centre of the sticky
+      // illustration (on a phone, where the card is a compact strip on top, the strip's lower edge). A chapter becomes
+      // active the moment its dot reaches that line and stays active until the dot drops back below it, so scrolling down
+      // and up behaves identically and nothing changes early.
+      const win = () => (root.current && root.current.ownerDocument.defaultView) || window;
+      const dotCenter = (el) => {
+        const span = el && el.querySelector(".ss-chapter-marker > span");
+        if (!span) return Infinity;
+        const pb = win().getComputedStyle(span, "::before");
+        return span.getBoundingClientRect().top + (parseFloat(pb.top) || 0) + (parseFloat(pb.height) || 10) / 2;
+      };
+      const flushLine = () => {
+        const r = root.current;
+        if (!r) return 0;
+        const consoleEl = r.querySelector(".ss-console"), head = r.querySelector(".ss-visual-heading"), note = r.querySelector(".ss-visual-note");
+        const single = win().getComputedStyle(r).gridTemplateColumns.trim().split(/\s+/).length < 2;
+        if (single || !head || !note || note.getBoundingClientRect().height === 0) return consoleEl ? consoleEl.getBoundingClientRect().bottom : 0;
+        // the illustration sits between its heading and its note (both stay still; the illustration itself animates in)
+        return (head.getBoundingClientRect().bottom + note.getBoundingClientRect().top) / 2;
+      };
+      const jumpTo = (i) => {
+        const el = chapters.current[i];
+        if (!el) return;
+        const w = win();
+        w.scrollTo({ top: w.scrollY + (dotCenter(el) - flushLine()) + 1, behavior: reduced ? "auto" : "smooth" });
+      };
       useEffect(() => {
-        const q = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const w = win();
+        const q = w.matchMedia("(prefers-reduced-motion: reduce)");
         const updateMotion = () => setReduced(q.matches);
         updateMotion();
         q.addEventListener("change", updateMotion);
         let raf = 0;
         const measure = () => {
           raf = 0;
-          const center = window.innerHeight * 0.58;
-          let best = 0, distance = Infinity;
+          const line = flushLine();
+          let best = 0;
           chapters.current.forEach((el, i) => {
-            if (!el) return;
-            const r2 = el.getBoundingClientRect();
-            const d = Math.abs(r2.top + r2.height / 2 - center);
-            if (d < distance) {
-              best = i;
-              distance = d;
-            }
+            if (el && dotCenter(el) <= line + 0.5) best = i;
           });
           setActive(best);
           const r = root.current?.getBoundingClientRect();
-          setVisible(!!r && r.top < innerHeight && r.bottom > 0);
+          setVisible(!!r && r.top < w.innerHeight && r.bottom > 0);
         };
         const onScroll = () => {
-          if (!raf) raf = requestAnimationFrame(measure);
+          if (!raf) raf = w.requestAnimationFrame(measure);
         };
         measure();
-        window.addEventListener("scroll", onScroll, {
-          passive: true
-        });
-        window.addEventListener("resize", onScroll);
+        w.addEventListener("scroll", onScroll, { passive: true });
+        w.addEventListener("resize", onScroll);
         return () => {
-          cancelAnimationFrame(raf);
-          window.removeEventListener("scroll", onScroll);
-          window.removeEventListener("resize", onScroll);
+          w.cancelAnimationFrame(raf);
+          w.removeEventListener("scroll", onScroll);
+          w.removeEventListener("resize", onScroll);
           q.removeEventListener("change", updateMotion);
         };
       }, []);
-      return <div className="ss-story" ref={root}><aside className="ss-sticky" aria-label="Illustration for the current story chapter"><div className="ss-console"><div className="ss-console-top"><span>{mode ? "Working with AI" : "Working with RPA"}</span><span>0{active + 1} / 04</span></div><div className="ss-visual-heading"><h3>{rows[active].label}</h3></div><div className={`ss-illustration ${visible && !reduced ? "ls-running" : ""}`} key={`${mode}-${active}`}><svg viewBox="0 0 286 153" aria-label={rows[active].label} role="img"><StageVisual stage={rows[active].stage} mode={mode} /></svg></div><p className="ss-visual-note">{rows[active].note}</p><div className="ss-chapter-nav" aria-label="Jump to story chapter">{rows.map((r, i) => <button key={i} aria-label={`Chapter ${i + 1}: ${r.title}`} aria-current={i === active ? "step" : void 0} onClick={() => chapters.current[i]?.scrollIntoView({
-        behavior: reduced ? "auto" : "smooth",
-        block: "center"
-      })}><span>0{i + 1}</span><i /></button>)}</div></div></aside><div className="ss-chapters">{rows.map((r, i) => <article className={`ss-chapter ${i === active ? "is-active" : ""}`} key={i} ref={(el) => {
+      return <div className="ss-story" ref={root}><aside className="ss-sticky" aria-label="Illustration for the current story chapter"><div className="ss-console"><div className="ss-console-top"><span>{mode ? "Working with AI" : "Working with RPA"}</span><span>0{active + 1} / 04</span></div><div className="ss-visual-heading"><h3>{rows[active].label}</h3></div><div className={`ss-illustration ${visible && !reduced ? "ls-running" : ""}`} key={`${mode}-${active}`}><svg viewBox="0 0 286 153" aria-label={rows[active].label} role="img"><StageVisual stage={rows[active].stage} mode={mode} /></svg></div><p className="ss-visual-note">{rows[active].note}</p><div className="ss-chapter-nav" aria-label="Jump to story chapter">{rows.map((r, i) => <button key={i} aria-label={`Chapter ${i + 1}: ${r.title}`} aria-current={i === active ? "step" : void 0} onClick={() => jumpTo(i)}><span>0{i + 1}</span><i /></button>)}</div></div></aside><div className="ss-chapters">{rows.map((r, i) => <article className={`ss-chapter ${i === active ? "is-active" : ""}`} key={i} ref={(el) => {
         chapters.current[i] = el;
       }}><div className="ss-chapter-marker"><span>0{i + 1}</span><small>{r.tag}</small></div><h3>{r.title}</h3><p>{r.text}</p><div className="ss-aside"><span aria-hidden="true">↳</span>{r.aside}</div>{i === 3 && <a href="#mr-work" className="ss-next-link">So what can this look like? <span>↓</span></a>}</article>)}</div></div>;
     }
