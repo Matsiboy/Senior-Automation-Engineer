@@ -19,9 +19,9 @@ import { Link, Routes, Route, Navigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 
 // ---------------------------------------------------------------------------
-// FIREBASE (optional — off by default so the site works with zero setup)
+// FIREBASE (enabled for this site; disable FIREBASE_ENABLED for built-in content only)
 // ---------------------------------------------------------------------------
-export const FIREBASE_ENABLED = true; // flip to true once firebaseConfig is filled in
+export const FIREBASE_ENABLED = true; // turn off to use the built-in content without publishing
 
 export const firebaseConfig = {
   apiKey: "AIzaSyD9LFCTjC9KNoNBCKXuglTiMBT8Nt4mxFM",
@@ -295,7 +295,14 @@ const WORK_CACHE_KEY = "site-work-published-v1";
 const readJsonLS = (k) => { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : null; } catch { return null; } };
 const writeJsonLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } };
 const removeLS = (k) => { try { localStorage.removeItem(k); } catch {} };
-const workTimeout = (p, ms, msg) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(msg || "timeout")), ms))]);
+// Release the timer when the operation settles; retain the same timeout/error behavior.
+const workTimeout = (p, ms, msg) => new Promise((resolve, reject) => {
+  const timer = setTimeout(() => reject(new Error(msg || "timeout")), ms);
+  Promise.resolve(p).then(
+    (value) => { clearTimeout(timer); resolve(value); },
+    (error) => { clearTimeout(timer); reject(error); }
+  );
+});
 
 async function workFirestore() {
   const { initializeApp, getApps } = await import("firebase/app");
@@ -315,8 +322,8 @@ const firebaseWorkStore = {
       try {
         const { db, fs } = await workFirestore();
         if (dead) return;
-        off = fs.onSnapshot(fs.doc(db, "siteContent", "work"), (snap) => onDoc(snap.exists() ? snap.data() : null), (err) => onError(err));
-      } catch (e) { onError(e); }
+        off = fs.onSnapshot(fs.doc(db, "siteContent", "work"), (snap) => { if (!dead) onDoc(snap.exists() ? snap.data() : null); }, (err) => { if (!dead) onError(err); });
+      } catch (e) { if (!dead) onError(e); }
     })();
     return () => { dead = true; off(); };
   },
@@ -345,7 +352,7 @@ const firebaseWorkStore = {
           const { getAuth, onAuthStateChanged } = await import("firebase/auth");
           if (dead) return;
           off = onAuthStateChanged(getAuth(app), (u) => cb(u ? { email: u.email || "signed in" } : null));
-        } catch { cb(null); }
+        } catch { if (!dead) cb(null); }
       })();
       return () => { dead = true; off(); };
     },
@@ -553,6 +560,7 @@ function WorkSection({ cards, loading, localImages, onOpen, selectedId, copy }) 
 // Overlay + dialog + focus handling, shared by the homepage and the editor's preview.
 function ModalShell({ kicker, title, onDismiss, closeRef, children, className }) {
   const root = useRef(null), dismissRef = useRef(onDismiss);
+  const titleId = useId();
   dismissRef.current = onDismiss;
   useEffect(() => {
     const doc = root.current ? root.current.ownerDocument : document;
@@ -563,7 +571,7 @@ function ModalShell({ kicker, title, onDismiss, closeRef, children, className })
   }, []);
   return (
     <div className="mr-overlay" ref={root} onClick={(e) => { if (e.target === e.currentTarget) dismissRef.current(); }}>
-      <section className={`mr-modal${className ? " " + className : ""}`} role="dialog" aria-modal="true" aria-labelledby="mr-dialogtitle" onKeyDown={(e) => {
+      <section className={`mr-modal${className ? " " + className : ""}`} role="dialog" aria-modal="true" aria-labelledby={titleId} onKeyDown={(e) => {
         if (e.key === "Tab") {
           const els = e.currentTarget.querySelectorAll("button,a[href],input,textarea");
           const first = els[0], last = els[els.length - 1], active = e.currentTarget.ownerDocument.activeElement;
@@ -573,7 +581,7 @@ function ModalShell({ kicker, title, onDismiss, closeRef, children, className })
       }}>
         <button className="mr-close" ref={closeRef} onClick={() => dismissRef.current()} aria-label="Close dialog">×</button>
         <div className="mr-kicker">{kicker}</div>
-        <h2 id="mr-dialogtitle">{title}</h2>
+        <h2 id={titleId}>{title}</h2>
         {children}
       </section>
     </div>
@@ -1442,7 +1450,7 @@ async function compressWorkImage(file) {
   try {
     const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("That file couldn't be read as a picture.")); i.src = url; });
     for (const [maxW, q] of [[1400, 0.82], [1400, 0.72], [1200, 0.66], [1000, 0.6], [800, 0.55]]) {
-      const k = Math.min(1, maxW / img.naturalWidth);
+      const k = Math.min(1, maxW / Math.max(img.naturalWidth, img.naturalHeight));
       const c = document.createElement("canvas");
       c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
       const ctx = c.getContext("2d");
@@ -1736,8 +1744,8 @@ function SiteEditor({ user, askSignIn }) {
   const mutate = (fn) => setDraft((d) => ({ ...d, cards: fn(d.cards) }));
   const updateCard = (id, fn) => mutate((cs) => cs.map((c) => (c.id === id ? fn(jsonClone(c)) : c)));
   const move = (id, dir) => mutate((cs) => { const a = cs.slice(), i = a.findIndex((c) => c.id === id), j = i + dir; if (j < 0 || j >= a.length) return cs; [a[i], a[j]] = [a[j], a[i]]; return a; });
-  const addCard = (template) => { const c = newWorkCard(template); mutate((cs) => (cs.length >= WORK_LIMITS.maxCards ? cs : [...cs, c])); setSelId(c.id); setTab("content"); setAddOpen(false); };
-  const duplicate = (c) => { const copy = jsonClone(c); copy.id = "card-" + Math.random().toString(36).slice(2, 8); copy.visible = false; copy.content.title = (copy.content.title + " (copy)").slice(0, WORK_LIMITS.title); copy.appearance.image = emptyWorkImage(); mutate((cs) => { const a = cs.slice(); a.splice(cs.findIndex((x) => x.id === c.id) + 1, 0, copy); return a; }); setSelId(copy.id); };
+  const addCard = (template) => { if (cards.length >= WORK_LIMITS.maxCards) return; const c = newWorkCard(template); mutate((cs) => [...cs, c]); setSelId(c.id); setTab("content"); setAddOpen(false); };
+  const duplicate = (c) => { if (cards.length >= WORK_LIMITS.maxCards) return; const copy = jsonClone(c); copy.id = "card-" + Math.random().toString(36).slice(2, 8); copy.visible = false; copy.content.title = (copy.content.title + " (copy)").slice(0, WORK_LIMITS.title); copy.appearance.image = emptyWorkImage(); mutate((cs) => { const a = cs.slice(); a.splice(cs.findIndex((x) => x.id === c.id) + 1, 0, copy); return a; }); setSelId(copy.id); };
   const remove = (c) => { if (!window.confirm(`Delete “${c.content.title || "this card"}”? It stays on the live site until you publish.`)) return; mutate((cs) => cs.filter((x) => x.id !== c.id)); setDraft((d) => { const im = { ...d.images }; delete im[c.id]; return { ...d, images: im }; }); setSelId(null); };
   const resetCard = (c) => {
     const def = defaultWorkCards().find((d) => d.id === c.id);
@@ -1852,7 +1860,7 @@ function SiteEditor({ user, askSignIn }) {
                 <div className="we-row">
                   <button type="button" className="we-mini" disabled={idx <= 0} onClick={() => move(card.id, -1)} aria-label="Move card up">↑ Up</button>
                   <button type="button" className="we-mini" disabled={idx >= cards.length - 1} onClick={() => move(card.id, 1)} aria-label="Move card down">↓ Down</button>
-                  <button type="button" className="we-mini" onClick={() => duplicate(card)}>Duplicate</button>
+                  <button type="button" className="we-mini" onClick={() => duplicate(card)} disabled={cards.length >= WORK_LIMITS.maxCards}>Duplicate</button>
                   <button type="button" className="we-mini" onClick={() => resetCard(card)}>Reset</button>
                   <button type="button" className="we-mini danger" onClick={() => remove(card)}>Delete</button>
                 </div>
