@@ -878,7 +878,7 @@ const MR_CSS = String.raw`@import url('https://fonts.googleapis.com/css2?family=
 .mr-app h2{font-family:'Source Serif 4',Georgia,serif;font-size:35px;font-weight:500;letter-spacing:-1.4px;line-height:1.2;margin:15px 0 0}
 .mr-sectionhead>p,.mr-approachintro>p{font-size:12px;line-height:1.8;color:var(--secondary);margin:0}
 .mr-workgrid{display:grid;grid-template-columns:1fr 1fr;gap:25px;margin-top:31px}
-.mr-project{text-align:left;min-width:0;border:1px solid #dfe3e9;border-radius:10px;background:#fff;padding:0;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.mr-project{display:flex;flex-direction:column;text-align:left;min-width:0;border:1px solid #dfe3e9;border-radius:10px;background:#fff;padding:0;overflow:hidden;transition:transform .2s,box-shadow .2s}
 .mr-project:hover{transform:translateY(-3px);box-shadow:0 12px 25px #213e6310}
 .mr-projectart{position:relative;background:var(--art-bg,#edf2fb);min-height:245px;padding:18px 23px 26px;border-bottom:1px solid var(--art-edge,#dfe7f3)}
 .mr-artlabel{display:flex;justify-content:space-between;gap:14px;font-size:7px;letter-spacing:.7px;color:var(--art-label,#7288b3)}
@@ -911,7 +911,7 @@ const MR_CSS = String.raw`@import url('https://fonts.googleapis.com/css2?family=
 .mr-approval{border-top:1px solid var(--art-edge,#ebe3d7);padding:9px 13px;font-size:8px;color:var(--art-mute,#8e7a60);display:flex;align-items:center;gap:6px}
 .mr-approval i{width:4px;height:4px;background:var(--art-accent,#bc965f);border-radius:50%}
 .mr-approval>span{margin-left:auto;color:var(--art-mute,#9e9875)}
-.mr-projectbody{padding:23px 25px;background:#fff}
+.mr-projectbody{flex:1;padding:23px 25px;background:#fff}
 .mr-projectbody .mr-kicker{font-size:8px;letter-spacing:1px;color:#7c8899}
 .mr-project h3{font-family:'Source Serif 4',Georgia,serif;font-size:22px;letter-spacing:-.6px;font-weight:500;color:var(--ink);margin:12px 0;display:flex;justify-content:space-between;gap:12px}
 .mr-project h3>span{color:var(--blue);font-weight:400;font-size:21px}
