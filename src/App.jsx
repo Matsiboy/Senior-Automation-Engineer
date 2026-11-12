@@ -119,13 +119,30 @@ const WORK_TEMPLATES = {
       { key: "footnote", name: "Footnote", def: "EXAMPLE DATA", max: 24 },
     ],
   },
+  balance: {
+    name: "Outstanding-balance process", hint: "Request → records → case update",
+    colors: { accent: "#7994CA", background: "#EDF2FB" },
+    labels: [
+      { key: "flow", name: "Top label", def: "REQUEST → BALANCE → UPDATE", max: 44 },
+      { key: "s1Title", name: "Step 1 title", def: "Find request", max: 24 },
+      { key: "s1Note", name: "Step 1 detail", def: "Open balance enquiry", max: 32 },
+      { key: "s2Title", name: "Step 2 title", def: "Query records", max: 24 },
+      { key: "s2Note", name: "Step 2 detail", def: "Unpaid invoices", max: 32 },
+      { key: "s3Title", name: "Step 3 title", def: "Check loans", max: 24 },
+      { key: "s3Note", name: "Step 3 detail", def: "Remaining balance", max: 32 },
+      { key: "s4Title", name: "Step 4 title", def: "Update case", max: 24 },
+      { key: "s4Note", name: "Step 4 detail", def: "Total appended", max: 32 },
+      { key: "outcomeTitle", name: "Outcome title", def: "One consolidated total", max: 36 },
+      { key: "outcomeNote", name: "Outcome detail", def: "Ready in the open case", max: 38 },
+    ],
+  },
   image: {
     name: "Uploaded image", hint: "Your own picture, cropped to the card",
     colors: { accent: "#7994CA", background: "#EDF2FB" },
     labels: [{ key: "flow", name: "Top label (optional)", def: "", max: 44 }],
   },
 };
-const WORK_TEMPLATE_ORDER = ["workflow", "answer", "dashboard", "image"];
+const WORK_TEMPLATE_ORDER = ["workflow", "answer", "dashboard", "balance", "image"];
 
 const emptyWorkImage = () => ({ kind: "none", url: "", ref: "", hash: "", alt: "", zoom: 1, x: 50, y: 50 });
 
@@ -163,6 +180,22 @@ function defaultWorkCards() {
         link: { label: "", url: "" },
       },
       appearance: { template: "answer", accent: "#B28E61", background: "#F3EEE7", labels: {}, image: emptyWorkImage() },
+    },
+    {
+      id: "total-outstanding-case", visible: true,
+      content: {
+        category: "RPA · CASE HANDLING",
+        title: "Total outstanding, without the manual chase.",
+        description: "A robot finds open balance requests, checks outstanding invoice and loan records, and adds the consolidated total to the case—saving handlers from repetitive lookups.",
+        linkLabel: "Explore the approach", illustrative: true,
+        sections: [
+          { heading: "The problem", body: "How can requests for total outstanding be answered without manually searching through several sets of financial records?" },
+          { heading: "The approach", body: "Identify open requests for a total outstanding balance. Retrieve unpaid invoice amounts, check the remaining loan balance, reconcile the amounts, and append the total to the case for the handler to review." },
+          { heading: "What to measure", body: "Compare handling time and lookups per case before and after automation. Check calculation accuracy and route incomplete or conflicting records to a person." },
+        ],
+        link: { label: "", url: "" },
+      },
+      appearance: { template: "balance", accent: "#7994CA", background: "#EDF2FB", labels: {}, image: emptyWorkImage() },
     },
   ];
 }
@@ -265,6 +298,17 @@ function normalizeWorkCard(raw, i, opts) {
   };
 }
 const normalizeWorkCards = (list, opts) => (Array.isArray(list) ? list.slice(0, WORK_LIMITS.maxCards).map((c, i) => normalizeWorkCard(c, i, opts)) : []);
+
+// One-time replacement of the third card from an older published site or browser draft.
+// Once published with cardRevision 1, subsequent admin edits, reorders and removals are preserved.
+function withBalanceCard(list, alreadyMigrated = false, opts) {
+  const cards = normalizeWorkCards(list, opts);
+  if (alreadyMigrated || cards.some((c) => c.id === "total-outstanding-case")) return cards;
+  const featured = normalizeWorkCard(defaultWorkCards()[2], 2, opts);
+  const next = cards.slice();
+  if (next.length >= 3) next[2] = featured; else next.push(featured);
+  return next;
+}
 const workKey = (cards) => JSON.stringify(normalizeWorkCards(cards));
 
 function workLabels(card) {
@@ -339,7 +383,7 @@ const firebaseWorkStore = {
     const { db, fs } = await workFirestore();
     const now = Date.now();
     for (const [ref, v] of Object.entries(images)) await workTimeout(fs.setDoc(fs.doc(db, "siteContent", ref), { data: v.data, hash: v.hash, updatedAt: now }), 25000);
-    await workTimeout(fs.setDoc(fs.doc(db, "siteContent", "work"), { version: 1, updatedAt: now, cards, page }), 25000);
+    await workTimeout(fs.setDoc(fs.doc(db, "siteContent", "work"), { version: 1, cardRevision: 1, updatedAt: now, cards, page }), 25000);
     for (const ref of removeRefs) { try { await workTimeout(fs.deleteDoc(fs.doc(db, "siteContent", ref)), 8000); } catch {} }
     return { updatedAt: now };
   },
@@ -384,7 +428,7 @@ if (import.meta.env.MODE === "test" && typeof window !== "undefined") {
 function usePublishedWork() {
   const [state, setState] = useState(() => {
     const cache = readJsonLS(WORK_CACHE_KEY);
-    return cache && Array.isArray(cache.cards) ? { status: "ready", cards: normalizeWorkCards(cache.cards), page: normalizePage(cache.page) } : { status: "loading", cards: [], page: normalizePage(null) };
+    return cache && Array.isArray(cache.cards) ? { status: "ready", cards: withBalanceCard(cache.cards, cache.cardRevision === 1), page: normalizePage(cache.page) } : { status: "loading", cards: [], page: normalizePage(null) };
   });
   useEffect(() => {
     const store = getWorkStore();
@@ -393,8 +437,8 @@ function usePublishedWork() {
     const unsub = store.subscribe(
       (doc) => {
         if (doc && Array.isArray(doc.cards)) {
-          const cards = normalizeWorkCards(doc.cards), page = normalizePage(doc.page);
-          writeJsonLS(WORK_CACHE_KEY, { updatedAt: doc.updatedAt || 0, cards, page });
+          const cards = withBalanceCard(doc.cards, doc.cardRevision === 1), page = normalizePage(doc.page);
+          writeJsonLS(WORK_CACHE_KEY, { updatedAt: doc.updatedAt || 0, cardRevision: doc.cardRevision || 0, cards, page });
           setState({ status: "ready", cards, page });
         } else {
           removeLS(WORK_CACHE_KEY);
@@ -494,6 +538,28 @@ function ArtDashboard({ L }) {
   );
 }
 
+function ArtBalance({ L }) {
+  const steps = [
+    ["01", "↳", L.s1Title, L.s1Note],
+    ["02", "⌕", L.s2Title, L.s2Note],
+    ["03", "≡", L.s3Title, L.s3Note],
+    ["04", "✓", L.s4Title, L.s4Note],
+  ];
+  return (
+    <div className="mr-balanceflow" role="img" aria-label="Automation: find an open balance request, query invoice records, check loan balances, and append the total outstanding to the case">
+      <div className="mr-balanceflow-grid">
+        {steps.map(([id, symbol, title, note], i) => (
+          <div className={`mr-balance-step${i === 3 ? " mr-balance-step-done" : ""}`} key={id}>
+            <div className="mr-balance-step-head"><span className="mr-balance-step-no">{id}</span><span className="mr-balance-step-icon" aria-hidden="true">{symbol}</span></div>
+            <strong>{title}</strong><small>{note}</small>
+          </div>
+        ))}
+      </div>
+      <div className="mr-balance-outcome"><span className="mr-balance-outcome-check" aria-hidden="true">✓</span><span><strong>{L.outcomeTitle}</strong><small>{L.outcomeNote}</small></span><span className="mr-balance-outcome-arrow" aria-hidden="true">↗</span></div>
+    </div>
+  );
+}
+
 function ArtImage({ src, image, title }) {
   return (
     <div className="mr-artimg">
@@ -504,7 +570,7 @@ function ArtImage({ src, image, title }) {
 
 function WorkArt({ card, localImages }) {
   const ap = card.appearance, L = workLabels(card), src = useWorkImageSrc(card, localImages);
-  const cls = ["mr-projectart", ap.template === "answer" ? "mr-aiart" : "", ap.template === "image" ? "mr-art-image" : "", ap.template === "dashboard" ? "mr-art-dash" : ""].filter(Boolean).join(" ");
+  const cls = ["mr-projectart", ap.template === "answer" ? "mr-aiart" : "", ap.template === "image" ? "mr-art-image" : "", ap.template === "dashboard" ? "mr-art-dash" : "", ap.template === "balance" ? "mr-balanceart" : ""].filter(Boolean).join(" ");
   return (
     <div className={cls} style={workArtVars(ap)} data-template={ap.template}>
       {ap.template === "image" && <ArtImage src={src} image={ap.image} title={card.content.title} />}
@@ -512,6 +578,7 @@ function WorkArt({ card, localImages }) {
       {ap.template === "workflow" && <ArtWorkflow L={L} />}
       {ap.template === "answer" && <ArtAnswer L={L} />}
       {ap.template === "dashboard" && <ArtDashboard L={L} />}
+      {ap.template === "balance" && <ArtBalance L={L} />}
     </div>
   );
 }
@@ -1124,6 +1191,30 @@ to{opacity:1;transform:translateY(0)}
 @media(max-width:640px){.ss-story{grid-template-columns:1fr;gap:5px;margin:25px 0 40px}.ss-sticky{top:8px;margin:0;z-index:3;padding:0 4px}.ss-console{transform:none;box-shadow:4px 4px 0 #dbe3f5;border-radius:13px;display:grid;grid-template-columns:1fr 1fr}.ss-console-top{grid-column:1/-1;padding:10px 15px;font-size:7px}.ss-visual-heading{padding:13px 0 13px 15px;align-self:center;gap:6px}.ss-visual-heading h3{font-size:17px}.ss-asterisk{font-size:23px}.ss-illustration{padding:0;align-self:center}.ss-illustration>svg{max-height:110px}.ss-visual-note{display:none}.ss-chapter-nav{grid-column:1/-1;padding:7px 15px;gap:12px}.ss-chapter-nav button{font-size:8px;padding:3px 0}.ss-chapter-nav i{margin-top:5px;height:2px}.ss-margin-note{display:none}.ss-paperclip{height:26px;top:-7px;right:20px;width:10px}.ss-chapters{margin:20px 10px 0;padding-left:27px}.ss-chapter{min-height:65vh;padding:45px 0;scroll-margin-top:220px}.ss-chapter-marker>span:before{left:-33px}.ss-chapter h3{font-size:35px}.ss-chapter>p{font-size:14px}.ss-chapter-marker small{font-size:7px}}
 @media(prefers-reduced-motion:reduce){.ss-story *{animation:none!important;transition:none!important}.ss-illustration .sv-draw,.ss-illustration .sv-chart{stroke-dashoffset:0}.ss-illustration .sv-check,.ss-illustration .sv-grow{opacity:1;transform:none}}
 
+
+/* Four-stage outstanding-balance process card; all other templates unchanged. */
+.mr-playful .mr-balanceart{background:radial-gradient(circle at 82% 5%,#ffffff99 0,transparent 42%),var(--art-bg,#edf2fb);border-bottom:1px solid var(--art-edge,#d0dff3);min-height:245px}
+.mr-balanceart .mr-artlabel{color:var(--art-label,#5273ac)}
+.mr-balanceflow{margin:20px 0 0;font-family:'Source Sans 3',Arial,sans-serif}
+.mr-balanceflow-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.mr-balance-step{position:relative;min-width:0;min-height:111px;border:1px solid var(--art-line,#ccd9ee);background:var(--art-surface,#fffefa);border-radius:10px;padding:11px 9px 10px;box-shadow:0 5px 11px #3154a50a}
+.mr-balance-step:not(:last-child)::after{content:'→';position:absolute;z-index:2;right:-10px;top:49px;color:var(--art-accent,#4f73bd);background:#e9f1fd;font-size:12px;line-height:16px;width:17px;height:17px;border:1px solid #d1def4;border-radius:50%;text-align:center}
+.mr-balance-step-head{display:flex;justify-content:space-between;align-items:center;gap:3px;margin-bottom:9px}
+.mr-balance-step-no{font-size:8px;letter-spacing:.65px;color:#8296b9}
+.mr-balance-step-icon{width:25px;height:25px;display:grid;place-items:center;background:var(--art-soft,#ebf1fd);color:var(--art-ink,#446ab5);border-radius:7px;font-size:16px;font-weight:600;line-height:1}
+.mr-balance-step strong{display:block;color:var(--art-ink,#294774);font-weight:700;font-size:10px;line-height:1.25;letter-spacing:-.12px}
+.mr-balance-step small{display:block;color:var(--art-mute,#7083a1);font-size:8px;line-height:1.35;margin-top:5px}
+.mr-balance-step-done{background:#eff6f4;border-color:#b7d7cd}
+.mr-balance-step-done .mr-balance-step-icon{background:#d7ebe3;color:#3f8069}
+.mr-balance-outcome{display:flex;align-items:center;gap:9px;margin-top:11px;border:1px solid var(--art-line,#c9d6ed);background:var(--art-surface,#f8fbff);border-radius:9px;padding:9px 12px}
+.mr-balance-outcome-check{width:22px;height:22px;flex-shrink:0;display:grid;place-items:center;border-radius:50%;color:#fff;background:#467e70;font-size:11px}
+.mr-balance-outcome>span:nth-child(2){min-width:0;flex:1}
+.mr-balance-outcome strong{display:block;color:var(--art-ink,#294774);font-size:10px;line-height:1.2}
+.mr-balance-outcome small{display:block;color:var(--art-mute,#6f83a2);font-size:8px;margin-top:2px}
+.mr-balance-outcome-arrow{color:var(--art-accent,#6685c0);font-size:16px}
+@media(max-width:900px){.mr-balanceflow-grid{gap:6px}.mr-balance-step{padding:9px 7px}.mr-balance-step strong{font-size:9px}.mr-balance-step small{font-size:7px}}
+@media(max-width:640px){.mr-balanceflow{margin-top:14px}.mr-balanceflow-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.mr-balance-step{min-height:94px}.mr-balance-step strong{font-size:11px}.mr-balance-step small{font-size:9px}.mr-balance-step:not(:last-child)::after{display:none}.mr-balance-step-head{margin-bottom:5px}.mr-playful .mr-balanceart{min-height:0}}
+
 /* ---- Selected work: editable cards (templates, states, text hardening) ---- */
 .mr-artlabel>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mr-project h3{overflow-wrap:anywhere}
@@ -1697,7 +1788,7 @@ function SiteEditor({ user, askSignIn }) {
   useEffect(() => {
     const t = setTimeout(() => setPub((p) => (p.ready ? p : { ready: true, cards: normalizeWorkCards(defaultWorkCards()), page: normalizePage(null), updatedAt: null, hasDoc: false, error: "Couldn't reach Firebase — showing the built-in content. You can still edit a draft." })), 4000);
     const off = store.subscribe(
-      (doc) => setPub({ ready: true, cards: doc && Array.isArray(doc.cards) ? normalizeWorkCards(doc.cards) : normalizeWorkCards(defaultWorkCards()), page: normalizePage(doc && doc.page), updatedAt: doc ? doc.updatedAt || 0 : null, hasDoc: !!doc, error: null }),
+      (doc) => setPub({ ready: true, cards: doc && Array.isArray(doc.cards) ? withBalanceCard(doc.cards, doc.cardRevision === 1) : normalizeWorkCards(defaultWorkCards()), page: normalizePage(doc && doc.page), updatedAt: doc ? doc.updatedAt || 0 : null, hasDoc: !!doc, error: null }),
       (err) => setPub((p) => ({ ...p, ready: true, cards: p.ready ? p.cards : normalizeWorkCards(defaultWorkCards()), page: p.ready ? p.page : normalizePage(null), error: "Couldn't read the published content: " + String((err && err.message) || err) }))
     );
     return () => { clearTimeout(t); off(); };
@@ -1707,7 +1798,7 @@ function SiteEditor({ user, askSignIn }) {
   useEffect(() => {
     if (!pub.ready || draft) return;
     const saved = readJsonLS(WORK_DRAFT_KEY);
-    const d = saved && Array.isArray(saved.cards) ? { cards: normalizeWorkCards(saved.cards, { keepEmpty: true }), images: saved.images && typeof saved.images === "object" ? saved.images : {}, baseUpdatedAt: saved.baseUpdatedAt ?? null }
+    const d = saved && Array.isArray(saved.cards) ? { cards: withBalanceCard(saved.cards, saved.cardRevision === 1, { keepEmpty: true }), images: saved.images && typeof saved.images === "object" ? saved.images : {}, baseUpdatedAt: saved.baseUpdatedAt ?? null }
       : { cards: jsonClone(pub.cards), images: {}, baseUpdatedAt: pub.updatedAt };
     const sp = saved && saved.page && typeof saved.page === "object" ? saved.page : null, np = normalizePage(sp || pub.page);
     if (sp && sp.contact && typeof sp.contact.linkUrl === "string") np.contact.linkUrl = sp.contact.linkUrl;
@@ -1724,7 +1815,7 @@ function SiteEditor({ user, askSignIn }) {
     if (!draft || !pub.ready) return;
     const t = setTimeout(() => {
       if (!dirty) { removeLS(WORK_DRAFT_KEY); setSavedAt(null); return; }
-      const ok = writeJsonLS(WORK_DRAFT_KEY, { v: 1, savedAt: Date.now(), baseUpdatedAt: draft.baseUpdatedAt, cards: draft.cards, images: draft.images, page: draft.page });
+      const ok = writeJsonLS(WORK_DRAFT_KEY, { v: 1, savedAt: Date.now(), baseUpdatedAt: draft.baseUpdatedAt, cardRevision: 1, cards: draft.cards, images: draft.images, page: draft.page });
       if (ok) setSavedAt(Date.now()); else setMsg({ kind: "error", text: "This browser's storage is full, so the draft can't be kept across a refresh. Publish now or remove a picture." });
     }, 350);
     return () => clearTimeout(t);
@@ -1796,7 +1887,7 @@ function SiteEditor({ user, askSignIn }) {
       const { updatedAt } = await store.publish({ cards: list, page: normalizePage(draft.page), images, removeRefs });
       setPub({ ready: true, cards: list, page: normalizePage(draft.page), updatedAt, hasDoc: true, error: null });
       setDraft((d) => ({ ...d, baseUpdatedAt: updatedAt }));
-      removeLS(WORK_DRAFT_KEY); writeJsonLS(WORK_CACHE_KEY, { updatedAt, cards: list, page: normalizePage(draft.page) }); setSavedAt(null);
+      removeLS(WORK_DRAFT_KEY); writeJsonLS(WORK_CACHE_KEY, { updatedAt, cardRevision: 1, cards: list, page: normalizePage(draft.page) }); setSavedAt(null);
       setUnauth(user === null);
       setMsg({ kind: "ok", text: "Published. Visitors see the changes now; pages that are already open update by themselves." });
     } catch (e) {
@@ -1819,7 +1910,7 @@ function SiteEditor({ user, askSignIn }) {
           </span>
         </div>
         <div className="we-actions">
-          <button type="button" className="we-btn" onClick={() => { if (!writeJsonLS(WORK_DRAFT_KEY, { v: 1, savedAt: Date.now(), baseUpdatedAt: draft.baseUpdatedAt, cards: draft.cards, images: draft.images, page: draft.page })) setMsg({ kind: "error", text: "This browser's storage is full — the draft couldn't be saved." }); else { setSavedAt(Date.now()); setMsg({ kind: "ok", text: "Draft saved in this browser." }); } }} disabled={!dirty}>Save draft</button>
+          <button type="button" className="we-btn" onClick={() => { if (!writeJsonLS(WORK_DRAFT_KEY, { v: 1, savedAt: Date.now(), baseUpdatedAt: draft.baseUpdatedAt, cardRevision: 1, cards: draft.cards, images: draft.images, page: draft.page })) setMsg({ kind: "error", text: "This browser's storage is full — the draft couldn't be saved." }); else { setSavedAt(Date.now()); setMsg({ kind: "ok", text: "Draft saved in this browser." }); } }} disabled={!dirty}>Save draft</button>
           <button type="button" className="we-btn" onClick={discard} disabled={!dirty}>Discard changes</button>
           <button type="button" className="we-btn primary" onClick={publish} disabled={!dirty || busy || !pub.ready}>{busy ? "Publishing…" : "Publish"}</button>
         </div>
